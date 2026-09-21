@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SplashScreen } from "@/components/splash-screen/SplashScreen";
+import { Header } from "@/components/header/Header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <SplashScreen />
-        <div data-page-content className="flex flex-1 flex-col">{children}</div>
+        <div data-page-content className="flex flex-1 flex-col"><Header />{children}</div>
       </body>
     </html>
   );
