@@ -20,7 +20,9 @@ export function appendIdentityReveal(timeline: gsap.core.Timeline, root: HTMLEle
   timeline.set(prefix, { visibility: "hidden" });
   timeline.to(dot, { yPercent: 0, duration: 0.15, ease: "power2.out" });
   timeline.addLabel("arrival");
-  timeline.to(ending, { xPercent: 0, duration: 0.45, ease: "back.out(1.05)" }, "arrival");
-  timeline.to(dot, { x: "-0.04em", duration: 0.09, ease: "power2.out" }, "arrival+=0.24");
-  timeline.to(dot, { x: 0, duration: 0.22, ease: "back.out(1.2)" });
+  timeline.to(ending, { xPercent: 0, duration: 0.36, ease: "power2.out" }, "arrival");
+  timeline.addLabel("impact", "arrival+=0.36");
+  timeline.to(ending, { x: "-0.025em", duration: 0.08, ease: "sine.out" }, "impact");
+  timeline.to(dot, { x: "-0.04em", duration: 0.08, ease: "sine.out" }, "impact");
+  timeline.to([ending, dot], { x: 0, duration: 0.24, ease: "power2.out" });
 }

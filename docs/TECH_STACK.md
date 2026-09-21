@@ -2,6 +2,8 @@
 
 Dokumen ini berisi rincian *tech stack*, arsitektur animasi, dan panduan pengembangan portofolio modern berkinerja tinggi (*high-performance & interactive portfolio*).
 
+Semua UI dan animasi wajib mobile-first. Ikuti [Mobile & Animation Guide](MOBILE_GUIDE.md) untuk aturan responsive, baseline splash, aksesibilitas, dan checklist verifikasi.
+
 ---
 
 ## 🛠️ Core Tech Stack

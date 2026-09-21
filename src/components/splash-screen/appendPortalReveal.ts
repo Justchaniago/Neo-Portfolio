@@ -57,7 +57,7 @@ export function appendPortalReveal(timeline: gsap.core.Timeline, root: HTMLEleme
   timeline.set(root, { backgroundColor: "#fff" });
   timeline.set([portal, wordmark], { visibility: "hidden" });
   timeline.set(portal, { clearProps: "willChange" });
-  // Keep one frame of solid white before React removes the overlay.
-  timeline.to({}, { duration: 1 / 60 });
+  // Reveal the already mounted page through white, without an abrupt cut.
+  timeline.to(root, { opacity: 0, duration: 0.45, ease: "sine.inOut" });
   return () => observer.disconnect();
 }

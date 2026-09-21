@@ -12,7 +12,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <SplashScreen />
-        {children}
+        <div data-page-content className="flex flex-1 flex-col">{children}</div>
       </body>
     </html>
   );

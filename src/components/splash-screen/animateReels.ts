@@ -26,10 +26,14 @@ export function animateReels(root: HTMLElement, onComplete: () => void) {
       }
       const position = { cycles: 0 };
       const render = () => {
+        const progress = position.cycles / (REEL.fastCycles + REEL.slowCycles);
+        // Phase differences fade to zero with zero slope at both endpoints.
+        const envelope = Math.sin(Math.PI * progress) ** 2;
         tracks.forEach((track) => {
           const index = Number(track.dataset.index);
           const direction = index % 2 === 0 ? 1 : -1;
-          const cell = REEL.startCell - direction * position.cycles;
+          const phase = ((index * 7) % 11) / 10 * 0.32;
+          const cell = REEL.startCell - direction * (position.cycles + phase * envelope);
           gsap.set(track, { y: 0, yPercent: (-cell / REEL.cells) * 100 });
         });
       };

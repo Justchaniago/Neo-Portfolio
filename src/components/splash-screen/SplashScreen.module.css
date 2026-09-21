@@ -14,9 +14,10 @@
   align-items: center;
   margin: 0;
   color: #fff;
-  font-size: clamp(2rem, 7vw, 6.5rem);
+  font-size: clamp(1.5rem, 8vw, 6.5rem);
   font-weight: 600;
-  letter-spacing: -0.065em;
+  letter-spacing: -0.045em;
+  font-optical-sizing: none;
   line-height: 1.2;
   white-space: nowrap;
   transform: translateX(var(--intro-offset, 0em));
@@ -87,11 +88,5 @@
 @media (prefers-reduced-motion: no-preference) {
   .track {
     transform: translateY(var(--reel-start));
-  }
-}
-
-@media (max-width: 640px) {
-  .wordmark {
-    font-size: clamp(1.75rem, 10vw, 3.5rem);
   }
 }
