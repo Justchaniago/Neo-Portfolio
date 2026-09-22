@@ -1,0 +1,28 @@
+.details {
+  position: absolute;
+  top: 50%;
+  left: max(32px, 8vw);
+  z-index: 2;
+  width: min(42vw, 560px);
+  transform: translateY(-50%);
+  color: #fff;
+  visibility: hidden;
+}
+.number { display: block; margin-bottom: 18px; color: rgb(255 255 255 / 0.46); font-size: 0.9rem; letter-spacing: 0.08em; }
+.title { margin: 0; font-size: clamp(3rem, 7vw, 7.5rem); font-weight: 600; letter-spacing: -0.07em; line-height: 0.88; }
+.meta { display: flex; gap: 18px; margin-top: 26px; color: rgb(255 255 255 / 0.62); font-size: clamp(0.78rem, 1.1vw, 1rem); letter-spacing: 0.02em; }
+.description { max-width: 32rem; margin: 26px 0 0; color: rgb(255 255 255 / 0.7); font-size: clamp(1rem, 1.35vw, 1.2rem); line-height: 1.45; }
+.link { min-height: 44px; margin-top: 28px; padding: 0; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+.link span { display: inline-block; margin-left: 10px; transition: transform 220ms ease; }
+.link:hover span, .link:focus-visible span { transform: translateX(5px); }
+.link:focus-visible { outline: 2px solid #dfa13d; outline-offset: 5px; }
+
+@media (max-width: 767px) {
+  .details { top: 20%; left: 18px; width: calc(100% - 36px); transform: none; text-align: center; }
+  .number { margin-bottom: 14px; }
+  .title { font-size: clamp(3rem, 14vw, 5rem); }
+  .meta { justify-content: center; margin-top: 18px; }
+  .description { max-width: 30rem; margin: 20px auto 0; font-size: 0.95rem; line-height: 1.4; }
+  .link { margin-top: 20px; }
+}
+@media (max-height: 480px) and (max-width: 767px) { .details { top: 12%; } .description { display: none; } }

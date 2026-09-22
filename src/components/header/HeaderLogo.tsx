@@ -11,7 +11,7 @@ export function HeaderLogo() {
 
   return (
     <Link ref={ref} href="/" className={styles.logo} aria-label="justchaniago — Home">
-      <span className={styles.frame} aria-hidden="true">
+        <span className={styles.frame} aria-hidden="true">
         <span className={styles.sizer}>justchaniago</span>
         <span className={styles.sizer}>chaniago.me</span>
         <span className={styles.mask}>
@@ -21,6 +21,7 @@ export function HeaderLogo() {
             <span className={styles.endingMask}><span className={styles.ending} data-logo-ending>me</span></span>
           </span>
         </span>
+        <span className={styles.projectMask} aria-hidden="true"><span className={styles.projectLabel}>projects</span></span>
       </span>
     </Link>
   );
