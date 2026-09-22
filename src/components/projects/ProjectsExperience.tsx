@@ -115,6 +115,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     <div ref={hero} className={styles.hero}>
       {children}
     </div>
+    <section className={styles.emptySection} aria-label="Next section" />
     <StackSection
       sectionRef={layer}
       surfacePathRef={surfacePath}

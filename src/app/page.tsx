@@ -7,7 +7,7 @@ import styles from "./Home.module.css";
 
 export default function Home() {
   return (
-    <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+    <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-white">
       <ProjectsExperience>
       <div className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden w-full">
         <div className="absolute inset-0 z-0 pointer-events-auto">
