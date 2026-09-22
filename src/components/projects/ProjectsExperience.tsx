@@ -5,6 +5,7 @@ import gsap from "gsap";
 import styles from "./ProjectsExperience.module.css";
 import { ProjectDetails } from "./ProjectDetails";
 import { ProjectRail } from "./ProjectRail";
+import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
 
 export function ProjectsExperience({ children }: { children: ReactNode }) {
   const hero = useRef<HTMLDivElement>(null);
@@ -29,8 +30,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       document.documentElement.dataset.projectsActive = String(shouldShowProjectLabel);
     }
     document.documentElement.dataset.projectsProgress = next.toFixed(4);
-    const curveDepth = 72 * (1 - next);
-    surfacePath.current?.setAttribute("d", `M0 ${curveDepth} Q720 0 1440 ${curveDepth} V1000 H0Z`);
+    setStackSurfaceProgress(surfacePath.current, next);
     sheet.style.setProperty("--sheet-shadow-alpha", (0.04 + (1 - next) * 0.14).toFixed(3));
     gsap.set(sheet, { autoAlpha: next > 0 ? 1 : 0, yPercent: (1 - next) * 100 });
     if (scroller.current) scroller.current.style.pointerEvents = next >= 0.999 ? "auto" : "none";
@@ -115,14 +115,20 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     <div ref={hero} className={styles.hero}>
       {children}
     </div>
-    <section ref={layer} id="projects-layer" className={styles.layer} inert={!active} aria-hidden={!active} aria-label="Projects">
-      <svg className={styles.surface} viewBox="0 0 1440 1000" preserveAspectRatio="none" aria-hidden="true">
-        <path ref={surfacePath} d="M0 72 Q720 0 1440 72 V1000 H0Z" />
-      </svg>
-      <div ref={scroller} className={styles.scroll} tabIndex={-1}>
+    <StackSection
+      sectionRef={layer}
+      surfacePathRef={surfacePath}
+      id="projects-layer"
+      className={styles.layer}
+      contentClassName={styles.scroll}
+      inert={!active}
+      aria-hidden={!active}
+      aria-label="Projects"
+    >
+      <div ref={scroller} tabIndex={-1}>
         <ProjectDetails activeIndex={projectIndex} />
         <ProjectRail onChange={handleProjectChange} />
       </div>
-    </section>
+    </StackSection>
   </>;
 }
