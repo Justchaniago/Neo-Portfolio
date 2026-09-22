@@ -33,8 +33,12 @@ export function SplashScreen() {
     if (content) content.inert = true;
     document.body.style.overflow = "hidden";
     // Font/network stalls must never block access indefinitely.
-    const timeout = window.setTimeout(() => setComplete(true), 12000);
-    const stop = animateReels(root, () => setComplete(true));
+    const finish = () => {
+      document.documentElement.dataset.splashComplete = "true";
+      setComplete(true);
+    };
+    const timeout = window.setTimeout(finish, 12000);
+    const stop = animateReels(root, finish);
     return () => {
       window.clearTimeout(timeout);
       stop();

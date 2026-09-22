@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SplashScreen } from "@/components/splash-screen/SplashScreen";
 import { Header } from "@/components/header/Header";
+import { InteractionBurst } from "@/components/animations/InteractionBurst/InteractionBurst";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className="h-full antialiased">
       <body className="h-full flex flex-col">
         <SplashScreen />
+        <InteractionBurst />
         <div data-page-content className="flex flex-1 flex-col h-full w-full relative overflow-hidden"><Header />{children}</div>
       </body>
     </html>

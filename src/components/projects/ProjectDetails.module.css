@@ -8,6 +8,20 @@
   color: #fff;
   visibility: hidden;
 }
+.grid {
+  position: absolute;
+  z-index: 0;
+  inset: -22vh -18vw;
+  pointer-events: none;
+  opacity: 0;
+  background-image: linear-gradient(rgb(255 255 255 / 0.065) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.065) 1px, transparent 1px);
+  background-size: clamp(56px, 5.5vw, 96px) clamp(56px, 5.5vw, 96px);
+  mask-image: radial-gradient(ellipse 58% 58% at 42% 50%, #000 0%, rgb(0 0 0 / 0.78) 46%, transparent 100%);
+  transition: opacity 720ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0ms;
+}
+.ready .grid { opacity: 1; transition-delay: 180ms; }
+.details > :not(.grid) { position: relative; z-index: 1; }
 .number { display: block; margin-bottom: 18px; color: rgb(255 255 255 / 0.46); font-size: 0.9rem; letter-spacing: 0.08em; }
 .title { margin: 0; font-size: clamp(3rem, 7vw, 7.5rem); font-weight: 600; letter-spacing: -0.07em; line-height: 0.88; }
 .meta { display: flex; gap: 18px; margin-top: 26px; color: rgb(255 255 255 / 0.62); font-size: clamp(0.78rem, 1.1vw, 1rem); letter-spacing: 0.02em; }
@@ -19,6 +33,7 @@
 
 @media (max-width: 767px) {
   .details { top: 20%; left: 18px; width: calc(100% - 36px); transform: none; text-align: center; }
+  .grid { inset: -12vh -18vw; background-size: 44px 44px; mask-image: radial-gradient(ellipse 70% 52% at 50% 50%, #000 0%, transparent 100%); }
   .number { margin-bottom: 14px; }
   .title { font-size: clamp(3rem, 14vw, 5rem); }
   .meta { justify-content: center; margin-top: 18px; }

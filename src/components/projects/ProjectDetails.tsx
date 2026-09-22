@@ -48,7 +48,8 @@ export function ProjectDetails({ activeIndex }: { activeIndex: number }) {
   }, [activeIndex, railReady]);
 
   return (
-    <article ref={root} className={styles.details} aria-live="polite">
+    <article ref={root} className={`${styles.details} ${railReady ? styles.ready : ""}`} aria-live="polite">
+      <span className={styles.grid} aria-hidden="true" />
       <span className={styles.number} data-detail-part>{detail.number}</span>
       <h2 className={styles.title} data-detail-part>{detail.title}</h2>
       <div className={styles.meta} data-detail-part><span>{detail.category}</span><span>{detail.year}</span></div>
