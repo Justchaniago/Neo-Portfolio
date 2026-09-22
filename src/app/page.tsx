@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { AntigravityHalo } from "@/components/animations/AntigravityHalo";
+import { HeroPortrait } from "@/components/hero/HeroPortrait";
 import { ProjectsExperience } from "@/components/projects/ProjectsExperience";
 import styles from "./Home.module.css";
 
@@ -14,15 +14,9 @@ export default function Home() {
           <AntigravityHalo />
         </div>
 
-        <Image
-          src="/hero-justchaniago.png"
-          alt="Just Chaniago wearing sunglasses"
-          width={1448}
-          height={1086}
-          priority
-          sizes="(max-width: 640px) 345vw, (max-width: 1024px) 100vw, 85vw"
-          className={`${styles.heroImage} relative z-10 h-auto w-[min(345vw,180dvh)] max-w-none select-none object-contain pointer-events-none sm:w-[min(100vw,112dvh)] lg:w-[min(85vw,112dvh)]`}
-        />
+        <div className={`${styles.heroImage} relative z-10 h-full w-full`}>
+          <HeroPortrait />
+        </div>
       </div>
       </ProjectsExperience>
     </main>

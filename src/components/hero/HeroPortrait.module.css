@@ -1,0 +1,101 @@
+.portrait {
+  --radius: 0px;
+  --origin-x: 50%;
+  --origin-y: 40%;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 10;
+  display: block;
+  width: min(345vw, 180dvh);
+  aspect-ratio: 1448 / 1086;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transform: translateX(-50%);
+}
+
+.portrait:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: -6px;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.baseImage { z-index: 0; }
+
+.revealImage {
+  z-index: 1;
+  clip-path: circle(var(--radius) at var(--origin-x) var(--origin-y));
+  will-change: clip-path;
+}
+
+.pixelCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.baseImage {
+  -webkit-mask-image: radial-gradient(circle at var(--origin-x) var(--origin-y), transparent 0 calc(var(--radius) - 1px), #000 var(--radius));
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-image: radial-gradient(circle at var(--origin-x) var(--origin-y), transparent 0 calc(var(--radius) - 1px), #000 var(--radius));
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+}
+
+@media (min-width: 640px) {
+  .portrait { width: min(100vw, 112dvh); }
+}
+
+@media (min-width: 1024px) {
+  .portrait { width: min(85vw, 112dvh); }
+}
+
+@media (max-width: 767px) {
+  .portrait {
+    width: min(220vw, 140dvh);
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .baseImage {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .revealImage {
+    clip-path: none;
+    opacity: 0;
+    will-change: auto;
+  }
+  .pixelCanvas { display: block; }
+  .pixelCanvas { opacity: 0; }
+  .mobileAlternate .baseImage { opacity: 0; }
+  .mobileAlternate .revealImage { opacity: 1; }
+  .mobileTransitioning .baseImage,
+  .mobileTransitioning .revealImage { opacity: 0; }
+  .mobileTransitioning .pixelCanvas { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revealImage { transition: none; }
+}
