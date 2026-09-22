@@ -11,7 +11,17 @@ export function HeaderLogo() {
   useLogoReveal(ref);
 
   return (
-    <Link ref={ref} href="/" className={styles.logo} aria-label="justchaniago — Home">
+    <Link
+      ref={ref}
+      href="/"
+      className={styles.logo}
+      aria-label="justchaniago — Home"
+      onClick={(event) => {
+        if (Number(document.documentElement.dataset.projectsProgress ?? "0") <= 0.001) return;
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("portfolio:close-projects"));
+      }}
+    >
         <span className={styles.frame} aria-hidden="true">
         <span className={styles.sizer}>justchaniago</span>
         <span className={styles.sizer}>chaniago.me</span>

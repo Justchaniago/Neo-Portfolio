@@ -35,6 +35,12 @@ export function HeaderNav() {
         ref={(element) => { links.current[index] = element; }}
         className={styles.navLink}
         href={item.href}
+        data-project-link={item.label === "project" ? "true" : undefined}
+        onClick={(event) => {
+          if (item.label !== "project") return;
+          event.preventDefault();
+          window.dispatchEvent(new CustomEvent("portfolio:toggle-projects"));
+        }}
         onPointerMove={(event) => move(index, event)}
         onPointerLeave={() => reset(index)}
       >
