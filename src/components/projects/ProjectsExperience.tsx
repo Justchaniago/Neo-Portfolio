@@ -34,6 +34,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       projectLabelVisible.current = shouldShowProjectLabel;
       document.documentElement.dataset.projectsActive = String(shouldShowProjectLabel);
     }
+    document.documentElement.dataset.projectsProgress = next.toFixed(4);
     const curveDepth = 72 * (1 - next);
     surfacePath.current?.setAttribute("d", `M0 ${curveDepth} Q720 0 1440 ${curveDepth} V1000 H0Z`);
     sheet.style.setProperty("--sheet-shadow-alpha", (0.04 + (1 - next) * 0.14).toFixed(3));
@@ -213,6 +214,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     if (followFrame.current !== undefined) cancelAnimationFrame(followFrame.current);
     followTime.current = undefined;
     delete document.documentElement.dataset.projectsActive;
+    delete document.documentElement.dataset.projectsProgress;
   }, []);
 
   useEffect(() => {
