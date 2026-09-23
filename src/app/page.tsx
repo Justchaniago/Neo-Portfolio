@@ -21,6 +21,7 @@ export default function Home() {
     const update = () => {
       const distance = Math.max(0, Math.min(scroller.scrollTop, scroller.clientHeight));
       layer.style.setProperty("--portrait-offset", `${reduced.matches ? 0 : distance * 0.25}px`);
+      document.documentElement.style.setProperty("--hero-scroll-progress", `${reduced.matches ? 0 : distance / Math.max(1, scroller.clientHeight)}`);
       const scrolling = String(scroller.scrollTop > 1);
       if (document.documentElement.dataset.heroScrolling !== scrolling) {
         document.documentElement.dataset.heroScrolling = scrolling;
@@ -39,6 +40,7 @@ export default function Home() {
         reduced.removeEventListener("change", update);
         resizeObserver.disconnect();
         delete document.documentElement.dataset.heroScrolling;
+        document.documentElement.style.removeProperty("--hero-scroll-progress");
       };
     }
 
@@ -53,6 +55,7 @@ export default function Home() {
     const onLenisScroll = (instance: Lenis) => {
       const distance = Math.max(0, Math.min(instance.scroll, scroller.clientHeight));
       layer.style.setProperty("--portrait-offset", `${distance * 0.25}px`);
+      document.documentElement.style.setProperty("--hero-scroll-progress", `${distance / Math.max(1, scroller.clientHeight)}`);
       const scrolling = String(instance.scroll > 1);
       if (document.documentElement.dataset.heroScrolling !== scrolling) {
         document.documentElement.dataset.heroScrolling = scrolling;
@@ -74,6 +77,7 @@ export default function Home() {
       lenis.destroy();
       cancelAnimationFrame(frame);
       delete document.documentElement.dataset.heroScrolling;
+      document.documentElement.style.removeProperty("--hero-scroll-progress");
     };
   }, []);
 
@@ -90,6 +94,12 @@ export default function Home() {
           <div className={`${styles.heroImage} relative h-full w-full`}>
             <HeroPortrait />
           </div>
+        </div>
+
+        <div className={styles.heroCopy} aria-label="Freelance Software Engineer">
+          <span className={styles.heroArrow} aria-hidden="true">↘</span>
+          <p>Freelance</p>
+          <p>Software Engineer</p>
         </div>
       </div>
       </ProjectsExperience>
