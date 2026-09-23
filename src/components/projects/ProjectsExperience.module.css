@@ -1,4 +1,9 @@
-.hero { position: relative; display: flex; flex: 0 0 100dvh; min-height: 100dvh; }
+.hero {
+  position: relative;
+  display: flex;
+  flex: 0 0 100dvh;
+  min-height: 100dvh;
+}
 
 .emptySection {
   min-height: 100dvh;

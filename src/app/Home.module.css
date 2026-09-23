@@ -1,3 +1,8 @@
+.portraitParallax {
+  pointer-events: none;
+  transform: translate3d(0, var(--portrait-offset, 0px), 0);
+}
+
 .heroImage {
   opacity: 0;
   pointer-events: none;
@@ -14,5 +19,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .portraitParallax { transform: none; }
   .heroImage, :global(html[data-splash-complete="true"]) .heroImage { opacity: 1; transform: none; animation: none; }
 }

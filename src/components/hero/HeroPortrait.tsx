@@ -241,9 +241,10 @@ export function HeroPortrait() {
     const element = root.current;
     if (!element) return;
     const isProjectsVisible = () => Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001;
+    const isHeroScrolling = () => document.documentElement.dataset.heroScrolling === "true";
     const syncHover = () => {
       const point = lastMouse.current;
-      if (!point || isProjectsVisible()) {
+      if (!point || isProjectsVisible() || isHeroScrolling()) {
         bounds.current = null;
         if (revealedRef.current) {
           revealedRef.current = false;
@@ -281,7 +282,7 @@ export function HeroPortrait() {
       queueSync();
     };
     const observer = new MutationObserver(() => {
-      if (isProjectsVisible()) {
+      if (isProjectsVisible() || isHeroScrolling()) {
         if (revealedRef.current) {
           revealedRef.current = false;
           setRevealed(false);
@@ -291,7 +292,7 @@ export function HeroPortrait() {
       queueSync();
     });
     window.addEventListener("pointermove", onPointerMove, { passive: true });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-projects-progress"] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-projects-progress", "data-hero-scrolling"] });
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
       observer.disconnect();
@@ -300,6 +301,7 @@ export function HeroPortrait() {
   }, [setOrigin]);
 
   const handlePointerEnter = (event: PointerEvent<HTMLButtonElement>) => {
+    if (document.documentElement.dataset.heroScrolling === "true" || Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001) return;
     if (event.pointerType === "mouse") {
       bounds.current = event.currentTarget.getBoundingClientRect();
       setOrigin(event.clientX, event.clientY);
@@ -330,7 +332,7 @@ export function HeroPortrait() {
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onPointerMove={(event) => {
-        if (event.pointerType === "mouse" && Number(document.documentElement.dataset.projectsProgress ?? "0") <= 0.001) {
+        if (event.pointerType === "mouse" && Number(document.documentElement.dataset.projectsProgress ?? "0") <= 0.001 && document.documentElement.dataset.heroScrolling !== "true") {
           setOrigin(event.clientX, event.clientY);
           revealedRef.current = true;
           setRevealed(true);
@@ -338,6 +340,7 @@ export function HeroPortrait() {
       }}
       onPointerDown={handlePointerDown}
       onClick={(event) => {
+        if (document.documentElement.dataset.heroScrolling === "true") return;
         if (window.matchMedia("(max-width: 767px)").matches) {
           mobileReplay.current();
           return;
