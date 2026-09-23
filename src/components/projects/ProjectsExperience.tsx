@@ -8,6 +8,7 @@ import { ProjectRail } from "./ProjectRail";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
 import { NarrativeSection } from "@/components/narrative/NarrativeSection";
 import { AsciiGlobeSection } from "@/components/narrative/AsciiGlobeSection";
+import { StaticPagesExperience } from "@/components/pages/StaticPagesExperience";
 
 const setProjectScrollLock = (locked: boolean) => {
   window.dispatchEvent(new CustomEvent("portfolio:scroll-lock", {
@@ -23,6 +24,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   const ratio = useRef(0);
   const projectLabelVisible = useRef(false);
   const returning = useRef(false);
+  const pendingProjectOpen = useRef(false);
   const [active, setActive] = useState(false);
   const [projectIndex, setProjectIndex] = useState(0);
   const handleProjectChange = useCallback((index: number) => setProjectIndex(index), []);
@@ -64,6 +66,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         if (destination === 0) {
           setProjectScrollLock(false);
           setActive(false);
+          window.dispatchEvent(new CustomEvent("portfolio:project-closed"));
           document.querySelector<HTMLAnchorElement>("[data-project-link='true']")?.focus({ preventScroll: true });
         } else {
           scroller.current?.focus({ preventScroll: true });
@@ -97,6 +100,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
           returning.current = false;
           heroElement.classList.remove(styles.heroReturning);
           gsap.set(heroElement, { clearProps: "transform" });
+          window.dispatchEvent(new CustomEvent("portfolio:project-closed"));
           document.querySelector<HTMLAnchorElement>("[data-project-link='true']")?.focus({ preventScroll: true });
         },
       });
@@ -104,20 +108,40 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   }, [apply]);
 
   useEffect(() => {
-    const toggleProjects = () => {
-      if (ratio.current > 0.001 || returning.current) closeProjects();
-      else settle(1);
+    const requestProject = (event?: Event) => {
+      if (event?.type === "portfolio:request-section") {
+        const section = (event as CustomEvent<{ section?: string }>).detail?.section;
+        if (section !== "project") return;
+      }
+      if (Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001) {
+        pendingProjectOpen.current = true;
+        window.dispatchEvent(new CustomEvent("portfolio:close-static-pages"));
+      } else if (ratio.current > 0.001 || returning.current) {
+        closeProjects();
+      } else {
+        settle(1);
+      }
+    };
+    const staticClosed = () => {
+      if (!pendingProjectOpen.current) return;
+      pendingProjectOpen.current = false;
+      settle(1);
     };
     const closeFromLogo = () => closeProjects();
-    window.addEventListener("portfolio:toggle-projects", toggleProjects);
+    window.addEventListener("portfolio:request-section", requestProject);
+    window.addEventListener("portfolio:toggle-projects", requestProject);
+    window.addEventListener("portfolio:static-closed", staticClosed);
     window.addEventListener("portfolio:close-projects", closeFromLogo);
     return () => {
-      window.removeEventListener("portfolio:toggle-projects", toggleProjects);
+      window.removeEventListener("portfolio:request-section", requestProject);
+      window.removeEventListener("portfolio:toggle-projects", requestProject);
+      window.removeEventListener("portfolio:static-closed", staticClosed);
       window.removeEventListener("portfolio:close-projects", closeFromLogo);
     };
   }, [closeProjects, settle]);
 
   useEffect(() => () => {
+    pendingProjectOpen.current = false;
     setProjectScrollLock(false);
     delete document.documentElement.dataset.projectsActive;
     delete document.documentElement.dataset.projectsProgress;
@@ -150,5 +174,6 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         <ProjectRail onChange={handleProjectChange} />
       </div>
     </StackSection>
+    <StaticPagesExperience />
   </>;
 }

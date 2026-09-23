@@ -44,17 +44,26 @@
 .endingMask { clip-path: inset(0 -0.08em); }
 .dot { display: block; transform: translateY(110%); }
 .ending { display: block; transform: translateX(115%); }
-.projectMask { position: absolute; top: 0; left: calc(100% + 0.38em); display: block; width: max-content; overflow: hidden; color: inherit; opacity: 0; visibility: hidden; transition: opacity 0s linear 760ms, visibility 0s linear 760ms; }
-.projectLabel { display: block; transform: translate3d(0, 118%, 0); transition: transform 760ms cubic-bezier(0.22, 1, 0.36, 1); }
-:global(html[data-projects-active="true"]) .projectMask { opacity: 1; visibility: visible; transition-delay: 0ms; }
-:global(html[data-projects-active="true"]) .projectLabel { transform: translate3d(0, 0, 0); transition-delay: 1000ms; }
+.sectionMask { position: absolute; top: 0; left: calc(100% + 0.38em); display: block; width: max-content; min-width: 4.7em; overflow: hidden; color: inherit; opacity: 0; visibility: hidden; transition: opacity 0s linear 760ms, visibility 0s linear 760ms; }
+.sectionSizer { display: block; visibility: hidden; }
+.sectionLabel { position: absolute; inset: 0 auto auto 0; display: block; transform: translate3d(0, 118%, 0); transition: transform 760ms cubic-bezier(0.22, 1, 0.36, 1); }
+:global(html[data-projects-active="true"]) .sectionMask,
+:global(html[data-static-section="about"]) .sectionMask,
+:global(html[data-static-section="contact"]) .sectionMask { opacity: 1; visibility: visible; transition-delay: 0ms; }
+:global(html[data-projects-active="true"]) .sectionLabel[data-section="project"],
+:global(html[data-static-section="about"]) .sectionLabel[data-section="about"],
+:global(html[data-static-section="contact"]) .sectionLabel[data-section="contact"] { transform: translate3d(0, 0, 0); transition-delay: 1000ms; }
 @media (min-width: 768px) {
   .header { padding-inline: max(40px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-right)); padding-block: 20px; }
 }
 @media (max-width: 767px) {
   .header { flex-direction: column; justify-content: flex-start; gap: 2px; }
   .logo { --project-extension-width: 4.7em; transition: transform 760ms cubic-bezier(0.22, 1, 0.36, 1); }
-  :global(html[data-projects-active="true"]) .logo { transform: translateX(calc(var(--project-extension-width) / -2)); }
+  :global(html[data-projects-active="true"]) .logo,
+  :global(html[data-static-section="about"]) .logo,
+  :global(html[data-static-section="contact"]) .logo { transform: translateX(calc(var(--project-extension-width) / -2)); }
+  :global(html[data-static-section="about"]) .logo { --project-extension-width: 2.9em; }
+  :global(html[data-static-section="contact"]) .logo { --project-extension-width: 3.5em; }
   .nav { position: static; margin-left: 0; gap: 14px; }
   .navLink { font-size: clamp(0.72rem, 3vw, 1rem); font-weight: 600; }
 }

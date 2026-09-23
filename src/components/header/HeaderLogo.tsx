@@ -19,6 +19,7 @@ export function HeaderLogo() {
       onClick={(event) => {
         event.preventDefault();
         window.dispatchEvent(new CustomEvent("portfolio:close-projects"));
+        window.dispatchEvent(new CustomEvent("portfolio:close-static-pages"));
         window.dispatchEvent(new CustomEvent("portfolio:go-home"));
       }}
     >
@@ -33,7 +34,12 @@ export function HeaderLogo() {
             <span className={styles.endingMask}><span className={styles.ending} data-logo-ending>me</span></span>
           </span>
         </span>
-        <span className={styles.projectMask} aria-hidden="true"><span className={styles.projectLabel}>projects</span></span>
+        <span className={styles.sectionMask} aria-hidden="true">
+          <span className={styles.sectionSizer}>projects</span>
+          <span className={styles.sectionLabel} data-section="project">projects</span>
+          <span className={styles.sectionLabel} data-section="about">about</span>
+          <span className={styles.sectionLabel} data-section="contact">contact</span>
+        </span>
       </span>
     </Link>
   );
