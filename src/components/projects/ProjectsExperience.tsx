@@ -6,6 +6,7 @@ import styles from "./ProjectsExperience.module.css";
 import { ProjectDetails } from "./ProjectDetails";
 import { ProjectRail } from "./ProjectRail";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
+import { NarrativeSection } from "@/components/narrative/NarrativeSection";
 
 export function ProjectsExperience({ children }: { children: ReactNode }) {
   const hero = useRef<HTMLDivElement>(null);
@@ -115,7 +116,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     <div ref={hero} className={styles.hero}>
       {children}
     </div>
-    <section className={styles.emptySection} aria-label="Next section" />
+    <NarrativeSection />
     <StackSection
       sectionRef={layer}
       surfacePathRef={surfacePath}
