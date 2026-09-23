@@ -1,0 +1,118 @@
+.links {
+  transform-origin: right center;
+  transition: transform 720ms cubic-bezier(.22,1,.36,1), opacity 380ms ease;
+}
+.links[data-compact="true"] {
+  transform: translateY(-34px);
+  opacity: 0;
+  pointer-events: none;
+}
+.links[data-section="project"] .navSlot[data-section="project"] .navLink {
+  opacity: 0;
+  transform: translateY(-118%);
+  pointer-events: none;
+}
+.links[data-section="project"] .navSlot[data-section="project"] { max-width: 0; }
+.links[data-section="project"] { transition-duration: 720ms; }
+.navSlot { display: inline-flex; max-width: 12em; overflow: hidden; transition: max-width 760ms cubic-bezier(.22,1,.36,1) 120ms; }
+.navLink { transition: opacity 760ms cubic-bezier(.22,1,.36,1), transform 760ms cubic-bezier(.22,1,.36,1); }
+.dock {
+  position: fixed;
+  z-index: 61;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(40px, env(safe-area-inset-right));
+  pointer-events: none;
+}
+.toggle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(.2);
+  transition: opacity 400ms ease, transform 720ms cubic-bezier(.22,1,.36,1);
+  touch-action: manipulation;
+}
+.surface {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #000;
+  border: 1px solid #fff;
+}
+.toggleWrap {
+  display: block;
+  width: 68px;
+  height: 68px;
+  opacity: 0;
+  transform: translateY(-18px);
+  transition: opacity 380ms ease, transform 720ms cubic-bezier(.22,1,.36,1);
+  transition-delay: 0ms;
+}
+.liquid {
+  position: absolute;
+  inset: 3px;
+  z-index: 1;
+  border-radius: 50%;
+  background: #fff;
+  clip-path: inset(0 0 100% round 50%);
+  animation: liquidDrainUp 650ms cubic-bezier(.22,1,.36,1) both;
+}
+.icon { position: relative; z-index: 2; display: grid; gap: 7px; opacity: 0; transform: scaleX(.4); transition: opacity 350ms ease, transform 600ms cubic-bezier(.22,1,.36,1); }
+.icon span { width: 27px; height: 2px; background: #fff; transition: transform 350ms ease, background-color 250ms ease; }
+.dock[data-compact="true"] .toggleWrap { opacity: 1; transform: none; }
+.dock[data-compact="true"] .toggle { opacity: 1; transform: scale(1); pointer-events: auto; }
+.dock[data-compact="true"] .icon { opacity: 1; transform: scaleX(1); }
+.toggle:hover .liquid, .toggle:focus-visible .liquid, .dock[data-open="true"] .liquid { animation: liquidFillUp 650ms cubic-bezier(.22,1,.36,1) both; }
+.toggle:hover .icon span, .toggle:focus-visible .icon span, .dock[data-open="true"] .icon span { background: #000; }
+.dock[data-open="true"] .icon span:first-child { transform: translateY(4.5px) rotate(45deg); }
+.dock[data-open="true"] .icon span:last-child { transform: translateY(-4.5px) rotate(-45deg); }
+.toggle:focus-visible { outline: 2px solid #dba4b3; outline-offset: 5px; border-radius: 50%; }
+.toggle:active .surface, .toggle:focus-visible .surface, .dock[data-open="true"] .surface { background: #000; }
+.panel {
+  position: absolute;
+  top: 72px;
+  right: 0;
+  min-width: 180px;
+  padding: 14px;
+  background: #262326;
+  color: #fff;
+  border-radius: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-12px);
+  transition: opacity 300ms ease, transform 450ms cubic-bezier(.22,1,.36,1), visibility 300ms;
+}
+.panel a { display: flex; align-items: center; min-height: 44px; padding: 0 16px; font-size: 22px; font-weight: 600; border-radius: 8px; }
+.panel a:hover, .panel a:focus-visible { background: #6f1830; }
+.dock[data-open="true"][data-compact="true"] .panel { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+.dock[data-compact="true"] .toggleWrap { transition-delay: 220ms; }
+
+@keyframes liquidFillUp {
+  from { clip-path: inset(0 0 100% round 50%); }
+  to { clip-path: inset(0 0 0 round 50%); }
+}
+
+@keyframes liquidDrainUp {
+  from { clip-path: inset(0 0 0 round 50%); }
+  to { clip-path: inset(0 0 100% round 50%); }
+}
+@media (max-width: 767px) {
+  .links { clip-path: inset(-5px -5px); }
+  .links[data-compact="true"] { transform: translateY(-22px); clip-path: inset(100% -5px 0); }
+  .links[data-section="project"] .navSlot[data-section="project"] { max-width: 12em; }
+  .links[data-section="project"] .navSlot[data-section="project"] .navLink { opacity: 1; transform: none; pointer-events: auto; }
+  .dock { top: auto; right: auto; left: max(20px, env(safe-area-inset-left)); bottom: calc(20px + env(safe-area-inset-bottom)); }
+  .toggleWrap { transform: translateY(110px); transition: transform 700ms cubic-bezier(.22,1,.36,1), opacity 450ms ease; }
+  .toggle { transform: scale(1); }
+  .dock[data-compact="true"] .toggleWrap { transform: translateY(0); }
+  .panel { top: auto; bottom: 72px; left: 0; right: auto; transform: translateY(12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .links, .toggleWrap, .toggle, .surface, .liquid, .icon, .icon span, .panel { transition: none; }
+}
