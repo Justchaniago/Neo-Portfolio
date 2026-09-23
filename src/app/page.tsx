@@ -19,6 +19,25 @@ export default function Home() {
     if (!scroller || !layer) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const scrollLocks = new Set<string>();
+    let previousOverflowY = scroller.style.overflowY;
+    const setScrollLock = (event: Event) => {
+      const detail = (event as CustomEvent<{ source?: string; locked?: boolean }>).detail;
+      const source = detail?.source;
+      if (!source) return;
+
+      if (detail.locked) {
+        if (scrollLocks.size === 0) previousOverflowY = scroller.style.overflowY;
+        scrollLocks.add(source);
+      } else {
+        scrollLocks.delete(source);
+      }
+
+      const locked = scrollLocks.size > 0;
+      scroller.style.overflowY = locked ? "hidden" : previousOverflowY;
+      if (locked) lenisRef.current?.stop();
+      else lenisRef.current?.start();
+    };
     const goHome = () => {
       if (lenisRef.current) {
         lenisRef.current.scrollTo(0, {
@@ -31,6 +50,7 @@ export default function Home() {
     };
 
     window.addEventListener("portfolio:go-home", goHome);
+    window.addEventListener("portfolio:scroll-lock", setScrollLock);
     const update = () => {
       const distance = Math.max(0, Math.min(scroller.scrollTop, scroller.clientHeight));
       layer.style.setProperty("--portrait-offset", `${reduced.matches ? 0 : distance * 0.25}px`);
@@ -50,6 +70,9 @@ export default function Home() {
     if (reduced.matches || !pageContent.current) {
       return () => {
         window.removeEventListener("portfolio:go-home", goHome);
+        window.removeEventListener("portfolio:scroll-lock", setScrollLock);
+        scrollLocks.clear();
+        scroller.style.overflowY = previousOverflowY;
         scroller.removeEventListener("scroll", update);
         reduced.removeEventListener("change", update);
         resizeObserver.disconnect();
@@ -67,6 +90,7 @@ export default function Home() {
       lerp: 0.085,
     });
     lenisRef.current = lenis;
+    if (scrollLocks.size > 0) lenis.stop();
     const onLenisScroll = (instance: Lenis) => {
       const distance = Math.max(0, Math.min(instance.scroll, scroller.clientHeight));
       layer.style.setProperty("--portrait-offset", `${distance * 0.25}px`);
@@ -86,7 +110,10 @@ export default function Home() {
 
     return () => {
       window.removeEventListener("portfolio:go-home", goHome);
-        scroller.removeEventListener("scroll", update);
+      window.removeEventListener("portfolio:scroll-lock", setScrollLock);
+      scrollLocks.clear();
+      scroller.style.overflowY = previousOverflowY;
+      scroller.removeEventListener("scroll", update);
       reduced.removeEventListener("change", update);
       resizeObserver.disconnect();
       lenis.off("scroll", onLenisScroll);

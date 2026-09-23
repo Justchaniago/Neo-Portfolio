@@ -16,3 +16,10 @@ All existing and future UI, pages, components, and animations must be mobile-fri
 - Preserve the accepted three-stage splash: alternating masked reels, transition to `chaniago.me`, then white circular reveal. Adapt its geometry for mobile without removing stages unless explicitly requested; reduced-motion is the accessibility exception.
 - Repository setup, commits, and publishing must not change UI or animation behavior unless the user requests those changes.
 - A successful lint/build does not prove mobile usability or smooth animation. Report the viewports/browsers actually checked and explicitly identify unverified behavior.
+
+## Feature integration and human approval
+
+- Before implementing a new feature, inspect existing features that share its UI surface, state, events, scroll ownership, navigation, or animation lifecycle.
+- If the new feature would conflict with, replace, disable, or materially change an accepted existing behavior, stop before making that conflicting change and request explicit human approval.
+- The approval request must identify the conflict, the existing behavior affected, and the proposed resolution. Do not silently remove or override an existing feature.
+- Compatible additions and bug fixes that preserve accepted behavior do not require extra approval.

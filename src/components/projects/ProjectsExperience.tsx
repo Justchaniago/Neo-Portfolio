@@ -9,6 +9,12 @@ import { setStackSurfaceProgress, StackSection } from "@/components/layout/Stack
 import { NarrativeSection } from "@/components/narrative/NarrativeSection";
 import { AsciiGlobeSection } from "@/components/narrative/AsciiGlobeSection";
 
+const setProjectScrollLock = (locked: boolean) => {
+  window.dispatchEvent(new CustomEvent("portfolio:scroll-lock", {
+    detail: { source: "projects", locked },
+  }));
+};
+
 export function ProjectsExperience({ children }: { children: ReactNode }) {
   const hero = useRef<HTMLDivElement>(null);
   const layer = useRef<HTMLElement>(null);
@@ -42,7 +48,10 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     const destination = target ?? (ratio.current >= 0.5 ? 1 : 0);
     const sheet = layer.current;
     if (!sheet) return;
-    if (destination > 0) setActive(true);
+    if (destination > 0) {
+      setProjectScrollLock(true);
+      setActive(true);
+    }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.to(ratio, {
       current: destination,
@@ -53,6 +62,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       onComplete: () => {
         apply(destination);
         if (destination === 0) {
+          setProjectScrollLock(false);
           setActive(false);
           document.querySelector<HTMLAnchorElement>("[data-project-link='true']")?.focus({ preventScroll: true });
         } else {
@@ -65,6 +75,10 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   const closeProjects = useCallback(() => {
     const heroElement = hero.current;
     if (!heroElement || returning.current) return;
+    if (ratio.current <= 0.001) {
+      setProjectScrollLock(false);
+      return;
+    }
     returning.current = true;
     setActive(true);
     heroElement.classList.add(styles.heroReturning);
@@ -78,6 +92,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         overwrite: true,
         onComplete: () => {
           apply(0);
+          setProjectScrollLock(false);
           setActive(false);
           returning.current = false;
           heroElement.classList.remove(styles.heroReturning);
@@ -103,6 +118,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   }, [closeProjects, settle]);
 
   useEffect(() => () => {
+    setProjectScrollLock(false);
     delete document.documentElement.dataset.projectsActive;
     delete document.documentElement.dataset.projectsProgress;
   }, []);
