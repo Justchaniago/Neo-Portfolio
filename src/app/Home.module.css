@@ -5,8 +5,8 @@
 
 .heroCopy {
   position: absolute;
-  top: 38%;
-  right: clamp(16px, 2vw, 36px);
+  top: 45%;
+  right: clamp(8px, 1.2vw, 24px);
   z-index: 20;
   display: grid;
   width: min(32vw, 460px);
@@ -27,7 +27,14 @@
 }
 
 .heroCopy p { margin: 0; }
-.heroArrow { justify-self: start; margin-bottom: clamp(20px, 4vw, 56px); margin-left: -18px; transform: translateY(10px); font-size: clamp(2rem, 3.4vw, 4rem); line-height: 0.7; }
+.heroArrow {
+  position: absolute;
+  left: clamp(-75px, -5.5vw, -52px);
+  top: clamp(-36px, -2.5vw, -20px);
+  font-size: clamp(2rem, 3.2vw, 3.8rem);
+  line-height: 1;
+  transform: rotate(-10deg);
+}
 
 .heroImage {
   opacity: 0;

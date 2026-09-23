@@ -17,6 +17,7 @@ const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 
 export function HeaderNav() {
+  const nav = useRef<HTMLElement>(null);
   const links = useRef<Array<HTMLAnchorElement | null>>([]);
   const button = useRef<HTMLButtonElement>(null);
   const magnetic = useRef<HTMLSpanElement>(null);
@@ -33,12 +34,13 @@ export function HeaderNav() {
     const mobile = window.matchMedia("(max-width: 767px)");
     const getSection = () => document.documentElement.dataset.projectsActive === "true" ? "project" : "hero";
     const update = () => {
-      const hasScrollablePage = scroller.scrollHeight > scroller.clientHeight + 1;
       const section = getSection();
       const overlayActive = section !== "hero" || Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001;
-      const next = mobile.matches
-        ? overlayActive || (hasScrollablePage && scroller.scrollTop > 24)
-        : !overlayActive && (collapsed ? scroller.scrollTop > 24 : scroller.scrollTop > 80);
+      const desktop = !mobile.matches;
+      // The desktop links belong to the document flow visually: the fixed shell
+      // remains for the logo, while the nav travels upward with the page.
+      if (nav.current) nav.current.style.transform = desktop ? `translate3d(0, -${scroller.scrollTop}px, 0)` : "";
+      const next = overlayActive || (mobile.matches ? scroller.scrollTop > 24 : scroller.scrollTop > 40);
       setActiveSection(section);
       if (next === collapsed) return;
       collapsed = next;
@@ -112,7 +114,7 @@ export function HeaderNav() {
     gsap.to(button.current, { x: 0, y: 0, duration: 0.62, ease: "elastic.out(1, 0.55)", overwrite: true });
   };
 
-  return <><nav className={`${styles.nav} ${motion.links}`} data-compact={compact} data-section={activeSection} inert={compact} aria-label="Main navigation">
+  return <><nav ref={nav} className={`${styles.nav} ${motion.links}`} data-compact={compact} data-section={activeSection} inert={compact} aria-label="Main navigation">
     {ITEMS.map((item, index) => (
       <span key={item.label} className={motion.navSlot} data-section={item.label}>
         <a

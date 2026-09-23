@@ -1,21 +1,16 @@
 .links {
+  position: relative;
+  overflow: hidden;
   transform-origin: right center;
-  transition: transform 720ms cubic-bezier(.22,1,.36,1), opacity 380ms ease;
+  transition: none;
 }
-.links[data-compact="true"] {
-  transform: translateY(-34px);
-  opacity: 0;
-  pointer-events: none;
-}
-.links[data-section="project"] .navSlot[data-section="project"] .navLink {
-  opacity: 0;
-  transform: translateY(-118%);
-  pointer-events: none;
-}
-.links[data-section="project"] .navSlot[data-section="project"] { max-width: 0; }
-.links[data-section="project"] { transition-duration: 720ms; }
 .navSlot { display: inline-flex; max-width: 12em; overflow: hidden; transition: max-width 760ms cubic-bezier(.22,1,.36,1) 120ms; }
-.navLink { transition: opacity 760ms cubic-bezier(.22,1,.36,1), transform 760ms cubic-bezier(.22,1,.36,1); }
+.navLink { transition: transform 600ms cubic-bezier(.16, 1, .3, 1), opacity 350ms ease; }
+.links[data-compact="true"] .navLink {
+  transform: translateY(-118%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 .dock {
   position: fixed;
   z-index: 61;
@@ -93,6 +88,16 @@
 .dock[data-open="true"][data-compact="true"] .panel { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
 .dock[data-compact="true"] .toggleWrap { transition-delay: 220ms; }
 
+@media (min-width: 768px) {
+  /* Compact state only reveals the circle. The links have already travelled
+     with the document and must not receive a second hide animation. */
+  .links[data-compact="true"] .navLink {
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
 @keyframes liquidFillUp {
   from { clip-path: inset(0 0 100% round 50%); }
   to { clip-path: inset(0 0 0 round 50%); }
@@ -106,6 +111,11 @@
   .links { clip-path: inset(-5px -5px); }
   .links[data-compact="true"] { transform: translateY(-22px); clip-path: inset(100% -5px 0); }
   .links[data-section="project"] .navSlot[data-section="project"] { max-width: 12em; }
+  .links[data-section="project"] .navSlot[data-section="project"] .navLink {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
   .links[data-section="project"] .navSlot[data-section="project"] .navLink { opacity: 1; transform: none; pointer-events: auto; }
   .dock { top: auto; right: auto; left: max(20px, env(safe-area-inset-left)); bottom: calc(20px + env(safe-area-inset-bottom)); }
   .toggleWrap { transform: translateY(110px); transition: transform 700ms cubic-bezier(.22,1,.36,1), opacity 450ms ease; }
