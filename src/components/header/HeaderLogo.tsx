@@ -17,9 +17,9 @@ export function HeaderLogo() {
       className={styles.logo}
       aria-label="justchaniago — Home"
       onClick={(event) => {
-        if (Number(document.documentElement.dataset.projectsProgress ?? "0") <= 0.001) return;
         event.preventDefault();
         window.dispatchEvent(new CustomEvent("portfolio:close-projects"));
+        window.dispatchEvent(new CustomEvent("portfolio:go-home"));
       }}
     >
         <span className={styles.frame} aria-hidden="true">

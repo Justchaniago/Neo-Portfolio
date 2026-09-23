@@ -11,6 +11,7 @@ export default function Home() {
   const page = useRef<HTMLElement>(null);
   const portraitLayer = useRef<HTMLDivElement>(null);
   const pageContent = useRef<HTMLDivElement>(null);
+  const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
     const scroller = page.current;
@@ -18,6 +19,18 @@ export default function Home() {
     if (!scroller || !layer) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const goHome = () => {
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(0, {
+          duration: reduced.matches ? 0 : 1.15,
+          force: true,
+        });
+      } else {
+        scroller.scrollTo({ top: 0, behavior: reduced.matches ? "auto" : "smooth" });
+      }
+    };
+
+    window.addEventListener("portfolio:go-home", goHome);
     const update = () => {
       const distance = Math.max(0, Math.min(scroller.scrollTop, scroller.clientHeight));
       layer.style.setProperty("--portrait-offset", `${reduced.matches ? 0 : distance * 0.25}px`);
@@ -36,6 +49,7 @@ export default function Home() {
 
     if (reduced.matches || !pageContent.current) {
       return () => {
+        window.removeEventListener("portfolio:go-home", goHome);
         scroller.removeEventListener("scroll", update);
         reduced.removeEventListener("change", update);
         resizeObserver.disconnect();
@@ -52,6 +66,7 @@ export default function Home() {
       syncTouch: true,
       lerp: 0.085,
     });
+    lenisRef.current = lenis;
     const onLenisScroll = (instance: Lenis) => {
       const distance = Math.max(0, Math.min(instance.scroll, scroller.clientHeight));
       layer.style.setProperty("--portrait-offset", `${distance * 0.25}px`);
@@ -70,11 +85,13 @@ export default function Home() {
     frame = requestAnimationFrame(raf);
 
     return () => {
-      scroller.removeEventListener("scroll", update);
+      window.removeEventListener("portfolio:go-home", goHome);
+        scroller.removeEventListener("scroll", update);
       reduced.removeEventListener("change", update);
       resizeObserver.disconnect();
       lenis.off("scroll", onLenisScroll);
       lenis.destroy();
+      lenisRef.current = null;
       cancelAnimationFrame(frame);
       delete document.documentElement.dataset.heroScrolling;
       document.documentElement.style.removeProperty("--hero-scroll-progress");

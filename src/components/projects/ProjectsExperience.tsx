@@ -7,6 +7,7 @@ import { ProjectDetails } from "./ProjectDetails";
 import { ProjectRail } from "./ProjectRail";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
 import { NarrativeSection } from "@/components/narrative/NarrativeSection";
+import { AsciiGlobeSection } from "@/components/narrative/AsciiGlobeSection";
 
 export function ProjectsExperience({ children }: { children: ReactNode }) {
   const hero = useRef<HTMLDivElement>(null);
@@ -117,6 +118,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       {children}
     </div>
     <NarrativeSection />
+    <AsciiGlobeSection />
     <StackSection
       sectionRef={layer}
       surfacePathRef={surfacePath}
