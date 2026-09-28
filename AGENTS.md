@@ -23,3 +23,10 @@ All existing and future UI, pages, components, and animations must be mobile-fri
 - If the new feature would conflict with, replace, disable, or materially change an accepted existing behavior, stop before making that conflicting change and request explicit human approval.
 - The approval request must identify the conflict, the existing behavior affected, and the proposed resolution. Do not silently remove or override an existing feature.
 - Compatible additions and bug fixes that preserve accepted behavior do not require extra approval.
+
+## Pragmatic execution & efficiency (Anti-Overengineering)
+
+- **Assess workload complexity before choosing workflow:** Small, mechanical, or straightforward edits (e.g., 1–3 file tweaks, CSS/style updates, typo fixes, small bug fixes) MUST be executed directly and immediately without creating verbose design specs, implementation plans, or multi-subagent pipelines.
+- **Resource stewardship:** Conserve user time and token usage. Never spawn implementer/reviewer subagents or multi-stage approval pipelines for simple micro-tasks.
+- **Subagent & plan threshold:** Reserve design specs, multi-task implementation plans, and subagent pipelines strictly for complex, multi-subsystem, or architectural features that genuinely require isolation and formal decomposition.
+
