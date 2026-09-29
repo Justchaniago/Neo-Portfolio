@@ -23,8 +23,7 @@ const clamp = (v: number) => Math.max(0, Math.min(1, v));
 const phase = (p: number, a: number, b: number) => clamp((p - a) / (b - a));
 const ease = (v: number) => v * v * (3 - 2 * v);
 const READING_START = 0.35;
-const READING_END = 0.855;
-const READING_SECONDS = 10.8;
+const READING_END = 0.91;
 const LOCK_SOURCE = "narrative-reading";
 
 export function NarrativeSection() {
@@ -49,7 +48,9 @@ export function NarrativeSection() {
     let top = 0, travel = 1, width = 1, height = 1, viewTop = 0, viewLeft = 0;
     let visible = false, disposed = false;
     let mx = -9999, my = -9999, mouseVX = 0, mouseVY = 0;
-    let reading = false, readingDone = false, readingTime = 0;
+    let reading = false, readingDone = false;
+    let taglineCurrent = 0;
+    let direction = 1, smoothDirection = 1;
     let inputDistance = 0, inputVelocity = 0, touchY: number | null = null;
     const externalLocks = new Set<string>();
 
@@ -72,7 +73,8 @@ export function NarrativeSection() {
       if (!visible || document.hidden || disposed || reduced.matches) { last = 0; return; }
       const dt = Math.min(0.05, Math.max(0.001, (time - (last || time - 16.67)) / 1000));
       last = time;
-      current += (target - current) * (1 - Math.exp(-dt / 0.075));
+      const step = (target - current) * (1 - Math.exp(-dt / 0.075));
+      current += reading ? Math.max(-dt * 0.06, Math.min(dt * 0.06, step)) : step;
       if (Math.abs(target - current) < 0.00001) current = target;
       // Viewports/second makes the response consistent across section lengths.
       // Ease into acceleration, then coast back to idle more slowly.
@@ -83,9 +85,14 @@ export function NarrativeSection() {
       const requestedSpeed = 1 - Math.exp(-velocity / 3);
       const response = requestedSpeed > speed ? 0.18 : 0.9;
       speed += (requestedSpeed - speed) * (1 - Math.exp(-dt / response));
+      if (!reading && Math.abs(current - previous) > 0.00001) direction = Math.sign(current - previous);
       previous = current;
-      if (reading && externalLocks.size === 0) readingTime = Math.min(READING_SECONDS, readingTime + dt);
-      const p = reading ? READING_START + 0.495 * readingTime / READING_SECONDS : current;
+      smoothDirection += (direction - smoothDirection) * (1 - Math.exp(-dt / 0.12));
+      // Both layers are scroll-driven, but the tagline has its own eased
+      // progress so it trails the burst instead of changing on a timer.
+      const p = current;
+      const taglineTarget = clamp((p - 0.29) / 0.66);
+      taglineCurrent += (taglineTarget - taglineCurrent) * (1 - Math.exp(-dt / 0.18));
       const entrance = ease(phase(p, 0, 0.065));
       const fade = 1 - ease(phase(p, 0.205, 0.285));
       const rise = (1 - entrance) * height * 0.34;
@@ -114,30 +121,39 @@ export function NarrativeSection() {
       mouseVX *= Math.pow(0.85, dt * 60); mouseVY *= Math.pow(0.85, dt * 60);
       const reveal = ease(phase(p, 0.225, 0.345));
       const intensity = reveal * (1 - ease(phase(p, 0.855, 0.94)));
-      burst.draw(dt, intensity, speed, reveal);
+      burst.draw(dt, intensity, speed, smoothDirection, reveal);
       captions.forEach((caption, i) => {
-        const start = 0.35 + i * 0.165;
-        const enter = ease(phase(p, start, start + 0.035));
-        const leave = ease(phase(p, start + 0.125, start + 0.16));
+        const captionProgress = taglineCurrent;
+        const start = i * 0.31;
+        const enter = ease(phase(captionProgress, start, start + 0.07));
+        const leave = ease(phase(captionProgress, start + 0.22, start + 0.31));
         caption.style.opacity = String(enter * (1 - leave));
         caption.style.transform = "translate3d(0," + ((1 - enter) * 18 - leave * 12) + "px,0)";
       });
       visual.style.setProperty("--window-progress", String(ease(phase(p, 0.895, 0.99))));
-      if (reading && readingTime >= READING_SECONDS) {
-        readingDone = true;
-        finishReading(READING_END);
+      // Reveal the overlapping globe as the portal finishes covering the screen.
+      visual.style.opacity = String(1 - ease(phase(p, 0.98, 1)));
+      const leavingReading = (direction < 0 && target <= 0.29) || (direction > 0 && target >= READING_END);
+      if (reading && Math.abs(current - target) < 0.00001 && leavingReading) {
+        readingDone = target >= READING_END;
+        finishReading(current);
       }
       if (intensity > 0 || p < 0.29 || current !== target || speed > 0.001) raf = requestAnimationFrame(render);
     };
     const wake = () => { if (!raf && visible && !reduced.matches && !document.hidden && !disposed) raf = requestAnimationFrame(render); };
     const scroll = () => {
+      if (reading) { wake(); return; }
+      const oldTarget = target;
       target = clamp((scroller.scrollTop - top) / travel);
       if (!reading && target < 0.3) readingDone = false;
-      if (!reading && !readingDone && !reduced.matches && externalLocks.size === 0 && target >= READING_START && scroller.scrollTop >= top) {
-        reading = true; readingTime = 0; inputDistance = 0;
-        current = target = previous = READING_START;
+      const enteringForward = !readingDone && oldTarget < READING_START && target >= READING_START;
+      const enteringReverse = oldTarget >= READING_END && target < READING_END;
+      if (!reduced.matches && externalLocks.size === 0 && (enteringForward || enteringReverse)) {
+        reading = true; inputDistance = 0;
+        direction = enteringReverse ? -1 : 1;
+        current = target = previous = enteringReverse ? READING_END : READING_START;
         setReadingLock(true);
-        scroller.scrollTop = top + travel * READING_START;
+        scroller.scrollTop = top + travel * current;
       }
       wake();
     };
@@ -159,7 +175,7 @@ export function NarrativeSection() {
       visual.style.setProperty("--portal-scale-x", String(width / Math.min(width * 0.22, 240) * 1.6));
       visual.style.setProperty("--portal-scale-y", String(height / Math.min(height * 0.28, 290) * 1.8));
       burst.resize(width, height);
-      if (reading) scroller.scrollTop = top + travel * READING_START;
+      if (reading) scroller.scrollTop = top + travel * current;
       scroll();
     };
     const pointer = (event: PointerEvent) => {
@@ -171,8 +187,13 @@ export function NarrativeSection() {
     const leave = () => { mx = my = -9999; mouseVX = mouseVY = 0; };
     const motionChange = () => { finishReading(); cancelAnimationFrame(raf); raf = 0; last = 0; current = target; measure(); };
     const drive = (delta: number) => {
-      if (delta < -0.5) { finishReading(0.29); return; }
-      inputDistance += Math.min(height * 3, Math.abs(delta));
+      if (delta === 0) return;
+      const nextDirection = Math.sign(delta);
+      if (nextDirection !== direction) target = current;
+      direction = nextDirection;
+      const distance = Math.min(height * 3, Math.abs(delta));
+      inputDistance += distance;
+      target = Math.max(0.29, Math.min(READING_END, target + direction * distance / height * 0.7));
       wake();
     };
     const wheel = (event: WheelEvent) => {
@@ -192,7 +213,8 @@ export function NarrativeSection() {
     const keyboard = (event: KeyboardEvent) => {
       if (!reading || externalLocks.size > 0 || event.ctrlKey || event.metaKey || event.altKey || (event.target instanceof HTMLElement && event.target.closest("input,textarea,select,button,a,[contenteditable]"))) return;
       if (["ArrowDown", "PageDown", " ", "End"].includes(event.key)) { event.preventDefault(); drive(event.shiftKey ? -height : height * 0.35); }
-      else if (["ArrowUp", "PageUp", "Home", "Escape"].includes(event.key)) { event.preventDefault(); finishReading(0.29); }
+      else if (["ArrowUp", "PageUp", "Home"].includes(event.key)) { event.preventDefault(); drive(-height * 0.35); }
+      else if (event.key === "Escape") { event.preventDefault(); finishReading(current); }
     };
     const navigation = () => { readingDone = true; finishReading(); };
     const lockChanged = (event: Event) => {

@@ -1,11 +1,13 @@
 .section {
   position: relative;
+  z-index: 1;
   min-height: 760svh;
-  background: #000000;
+  background: transparent;
   color: #f4ead8;
 }
 
 .stage {
+  background: #000000;
   --window-progress: 0;
   position: sticky;
   top: 0;
@@ -91,7 +93,6 @@
       1
     );
   transform-origin: center bottom;
-  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.45);
   will-change: transform;
 }
 
@@ -107,8 +108,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .section { min-height: auto; }
-  .stage { position: relative; height: auto; padding: 80px 0; overflow: visible; gap: 64px; }
+  .section { min-height: auto; background: #000; }
+  .stage { position: relative; height: auto; padding: 80px 0; overflow: visible; gap: 64px; opacity: 1 !important; }
   .copy { transform: none !important; opacity: 1 !important; padding-top: 0; }
   .word { transform: none !important; will-change: auto; }
   .burst, .window { display: none; }

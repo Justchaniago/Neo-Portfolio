@@ -20,18 +20,19 @@ export function createRadialBurst(canvas: HTMLCanvasElement) {
         veil.addColorStop(1, "rgba(0,0,0,0)");
       }
     },
-    draw(dt: number, intensity: number, speed: number, reveal: number) {
+    draw(dt: number, intensity: number, speed: number, direction: number, reveal: number) {
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
       if (intensity <= 0) return;
       // Smooth velocity comes from the controller; warp only engages at high input.
       const warp = Math.max(0, (speed - 0.3) / 0.7);
-      clock += dt * (0.055 + speed * 0.16 + warp * warp * 0.85);
+      clock += direction * dt * (0.055 + speed * 0.16 + warp * warp * 0.85);
       const extent = Math.hypot(width, height) * 0.58;
       for (let i = 0; i < (width < 600 ? 128 : rays.length); i++) {
         const ray = rays[i];
-        const t = (ray.phase + clock * (0.55 + ray.depth * 0.7)) % 1;
+        const position = ray.phase + clock * (0.55 + ray.depth * 0.7);
+        const t = position - Math.floor(position);
         const radius = (28 + Math.pow(t, 2 + warp * 0.6) * extent) * (0.12 + reveal * 0.88);
         const length = (8 + t * t * (width < 600 ? 115 : 230)) * (0.4 + ray.depth * 0.6) * reveal * (1 + warp * 3.8);
         const alpha = intensity * Math.min(1, t * 5) * Math.min(1, (1 - t) * 7) * (0.25 + ray.depth * 0.65);

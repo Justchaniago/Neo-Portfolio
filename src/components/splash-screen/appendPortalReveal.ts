@@ -36,7 +36,7 @@ export function appendPortalReveal(timeline: gsap.core.Timeline, root: HTMLEleme
   });
   observer.observe(root);
 
-  timeline.addLabel("portal", "+=0.65");
+  timeline.addLabel("portal", "+=0.48");
   timeline.call(() => {
     active = true;
     measure();
@@ -46,7 +46,7 @@ export function appendPortalReveal(timeline: gsap.core.Timeline, root: HTMLEleme
   }, [], "portal");
   timeline.to(zoom, {
     progress: 1,
-    duration: 1.45,
+    duration: 1.35,
     ease: "power2.inOut",
     onUpdate: render,
     onComplete: () => {

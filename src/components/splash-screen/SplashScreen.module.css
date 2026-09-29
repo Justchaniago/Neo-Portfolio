@@ -72,6 +72,12 @@
   visibility: hidden;
 }
 
+.revealLetter {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
 .track {
   position: absolute;
   inset: 0 0 auto;

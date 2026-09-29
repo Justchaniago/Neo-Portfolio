@@ -2,12 +2,20 @@
 
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { animateReels, REEL } from "./animateReels";
+import { animateGlyphReveal } from "./animateGlyphReveal";
+import glyphFont from "./glyphPaths.json";
 import styles from "./SplashScreen.module.css";
+
+// Switch to "airport" to restore the original reel entrance.
+const SPLASH_ENTRANCE: "glyph-reveal" | "airport" = "glyph-reveal";
 
 function ReelLetters({ text, offset = 0 }: { text: string; offset?: number }) {
   return Array.from(text, (character, index) => (
-    <span className={styles.slot} key={index}>
+    <span className={styles.slot} key={index} style={SPLASH_ENTRANCE === "glyph-reveal" ? { width: `${glyphFont.glyphs[character as keyof typeof glyphFont.glyphs].advance / glyphFont.unitsPerEm - 0.045}em` } : undefined}>
       <span className={styles.placeholder}>{character}</span>
+      {SPLASH_ENTRANCE === "glyph-reveal" ? (
+        <span className={styles.revealLetter} data-reveal-letter>{character}</span>
+      ) : (
       <span className={styles.track} data-reel data-index={offset + index}>
         {Array.from({ length: REEL.cells }, (_, cell) => (
           <span className={styles.cell} key={cell}>
@@ -15,6 +23,7 @@ function ReelLetters({ text, offset = 0 }: { text: string; offset?: number }) {
           </span>
         ))}
       </span>
+      )}
     </span>
   ));
 }
@@ -38,7 +47,7 @@ export function SplashScreen() {
       setComplete(true);
     };
     const timeout = window.setTimeout(finish, 12000);
-    const stop = animateReels(root, finish);
+    const stop = (SPLASH_ENTRANCE === "airport" ? animateReels : animateGlyphReveal)(root, finish);
     return () => {
       window.clearTimeout(timeout);
       stop();
