@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createLandSampler, SURABAYA, type LandPolygon } from "./globeData";
 import styles from "./AsciiGlobeSection.module.css";
+import { createAsciiSweep } from "./asciiSweep";
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
 const phase = (p: number, a: number, b: number) => {
@@ -16,14 +17,16 @@ export function AsciiGlobeSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
+  const captionRef = useRef<HTMLParagraphElement>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const section = sectionRef.current;
     const canvas = canvasRef.current;
     const label = labelRef.current;
+    const caption = captionRef.current;
     const scroller = section?.closest<HTMLElement>("main");
-    if (!section || !canvas || !scroller || !label) return;
+    if (!section || !canvas || !scroller || !label || !caption) return;
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -32,10 +35,15 @@ export function AsciiGlobeSection() {
     let width = 0, height = 0, dpr = 1, top = 0, travel = 1;
     let target = 0, current = 0, raf = 0, last = 0;
     let visible = false, disposed = false;
+    let touchPointer: number | null = null;
+    let lastPointer: { x: number; y: number; time: number } | null = null;
+    let globeTravel = 1, cached = false;
+    const sweep = createAsciiSweep();
+    const settledMap = document.createElement("canvas");
+    const settledCtx = settledMap.getContext("2d")!;
 
-    const draw = () => {
+    const drawMap = (p: number) => {
       if (!sampler) return;
-      const p = reduced.matches ? 1 : current;
       const zoom = phase(p, 0.32, 0.84);
       const flatten = phase(p, 0.52, 0.84);
       const pin = phase(p, 0.84, 0.96);
@@ -102,6 +110,26 @@ export function AsciiGlobeSection() {
       label.style.opacity = String(pin);
     };
 
+    const draw = () => {
+      if (!sampler) return;
+      const distance = current * travel;
+      const p = reduced.matches ? 1 : clamp(distance / globeTravel);
+      const extra = reduced.matches ? 0 : clamp((distance - globeTravel) / Math.max(1, height * 2.4));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (p === 1 && cached) {
+        ctx.drawImage(settledMap, 0, 0, width, height);
+      } else {
+        drawMap(p);
+        if (p === 1) { settledCtx.drawImage(canvas, 0, 0); cached = true; }
+      }
+      sweep.draw(ctx, extra);
+      const scale = Math.min((width - 32) / 50, Math.max(4, height - 190) / 22);
+      const px = width / 2 + (SURABAYA.lon - 118) * scale;
+      const py = height * 0.53 - (SURABAYA.lat + 2.5) * scale;
+      label.style.opacity = String(phase(p, 0.84, 0.96) * (1 - sweep.covered(px, py, extra)));
+      caption.style.opacity = String(1 - phase(extra, 0.15, 0.24));
+    };
+
     const tick = (time: number) => {
       raf = 0;
       if (!visible || document.hidden || disposed) return;
@@ -109,24 +137,66 @@ export function AsciiGlobeSection() {
       last = time;
       current += (target - current) * (1 - Math.exp(-dt / 65));
       if (Math.abs(target - current) < 0.0001) current = target;
+      const surfaceMoving = !reduced.matches && sweep.updateMotion(dt);
       draw();
-      if (current !== target && !reduced.matches) raf = requestAnimationFrame(tick);
+      if ((current !== target || surfaceMoving) && !reduced.matches) raf = requestAnimationFrame(tick);
     };
-    const wake = () => { if (!raf && !disposed) raf = requestAnimationFrame(tick); };
+    const wake = () => { if (!raf && !disposed && visible && !document.hidden) raf = requestAnimationFrame(tick); };
     const scroll = () => { target = clamp((scroller.scrollTop - top) / travel); wake(); };
+    const moveSurface = (event: PointerEvent) => {
+      if (reduced.matches || !visible) return;
+      const extra = clamp((current * travel - globeTravel) / Math.max(1, height * 2.4));
+      if (extra <= 0.15 || extra >= 0.99) { lastPointer = null; return; }
+      const bounds = canvas.getBoundingClientRect();
+      const x = event.clientX - bounds.left;
+      const y = event.clientY - bounds.top;
+      const now = performance.now();
+      if (lastPointer && now - lastPointer.time < 160) {
+        sweep.drag(x, y, x - lastPointer.x, y - lastPointer.y);
+        wake();
+      }
+      lastPointer = { x, y, time: now };
+    };
+    const pointerMove = (event: PointerEvent) => {
+      if (event.pointerType === "mouse" || (touchPointer !== null && event.pointerId === touchPointer)) moveSurface(event);
+    };
+    const pointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") return;
+      touchPointer = event.pointerId;
+      lastPointer = null;
+      moveSurface(event);
+    };
+    const pointerEnd = (event: PointerEvent) => {
+      if (event.pointerId === touchPointer) {
+        touchPointer = null;
+        lastPointer = null;
+      }
+    };
+    const pointerLeave = () => { lastPointer = null; touchPointer = null; };
     const resize = () => {
       width = canvas.clientWidth;
       height = canvas.clientHeight;
       dpr = Math.min(devicePixelRatio || 1, 2);
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      settledMap.width = canvas.width; settledMap.height = canvas.height;
+      cached = false;
+      const header = document.querySelector("header");
+      const headerBottom = header ? Math.max(header.getBoundingClientRect().bottom,
+        ...Array.from(header.querySelectorAll("a,button"), el => el.getBoundingClientRect().bottom)) : 0;
+      sweep.resize(width, height, dpr, Math.max(0, headerBottom - scroller.getBoundingClientRect().top));
+      pointerLeave();
       top = section.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       travel = Math.max(1, section.offsetHeight - height);
+      globeTravel = Math.max(1, travel - (reduced.matches ? 0 : height * 2.4));
       scroll();
     };
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (visible) { last = 0; wake(); }
+      else { cancelAnimationFrame(raf); raf = 0; last = 0; pointerLeave(); sweep.resetMotion(); }
     }, { root: scroller });
     observer.observe(section);
     const size = new ResizeObserver(resize);
@@ -134,7 +204,12 @@ export function AsciiGlobeSection() {
     size.observe(section);
     if (section.parentElement) size.observe(section.parentElement);
     scroller.addEventListener("scroll", scroll, { passive: true });
-    reduced.addEventListener("change", wake);
+    canvas.addEventListener("pointermove", pointerMove, { passive: true });
+    canvas.addEventListener("pointerdown", pointerDown, { passive: true });
+    canvas.addEventListener("pointerup", pointerEnd, { passive: true });
+    canvas.addEventListener("pointercancel", pointerEnd, { passive: true });
+    canvas.addEventListener("pointerleave", pointerLeave, { passive: true });
+    reduced.addEventListener("change", resize);
     document.addEventListener("visibilitychange", wake);
     resize();
     fetch("/maps/earth.json", { signal: controller.signal })
@@ -152,7 +227,12 @@ export function AsciiGlobeSection() {
       observer.disconnect();
       size.disconnect();
       scroller.removeEventListener("scroll", scroll);
-      reduced.removeEventListener("change", wake);
+      canvas.removeEventListener("pointermove", pointerMove);
+      canvas.removeEventListener("pointerdown", pointerDown);
+      canvas.removeEventListener("pointerup", pointerEnd);
+      canvas.removeEventListener("pointercancel", pointerEnd);
+      canvas.removeEventListener("pointerleave", pointerLeave);
+      reduced.removeEventListener("change", resize);
       document.removeEventListener("visibilitychange", wake);
     };
   }, []);
@@ -161,7 +241,7 @@ export function AsciiGlobeSection() {
     <section ref={sectionRef} className={styles.section} aria-label="From the world to Surabaya, Indonesia">
       <div className={styles.stickyContainer}>
         <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
-        <p className={styles.caption}>A world of possibilities. A place to call home.</p>
+        <p ref={captionRef} className={styles.caption}>A world of possibilities. A place to call home.</p>
         <div ref={labelRef} className={styles.location}>
           <strong>SURABAYA, ID</strong>
           <span>7.2575° S · 112.7521° E</span>

@@ -260,7 +260,7 @@ export function AntigravityHalo({
     intersectionObserver.observe(container);
 
     // Animation Loop
-    const clock = new THREE.Clock();
+    const startTime = performance.now();
     let animFrameId: number;
 
     const animate = () => {
@@ -268,7 +268,7 @@ export function AntigravityHalo({
 
       if (!isVisible) return;
 
-      const elapsedTime = prefersReducedMotion ? 1.0 : clock.getElapsedTime();
+      const elapsedTime = prefersReducedMotion ? 1.0 : (performance.now() - startTime) * 0.001;
       uniforms.uTime.value = elapsedTime;
 
       // Dynamic breathing halo radius

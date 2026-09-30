@@ -10,7 +10,7 @@ const lines = [
   "But the interesting part is how they work together.",
 ];
 // Draft copy, isolated for editorial tuning.
-const taglines = ["Different parts. One system.", "Connected by purpose.", "Built here. Reaching beyond."];
+const tagline = "Let’s build what comes next at escape velocity.";
 const drift = [
   [-110, -160, -18], [140, -90, 16], [-80, 150, -12], [180, 170, 22], [-160, 60, -15],
   [90, -170, 14], [-210, -60, -24], [150, 130, 12], [-120, 220, -19], [220, -130, 25],
@@ -22,7 +22,7 @@ const drift = [
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
 const phase = (p: number, a: number, b: number) => clamp((p - a) / (b - a));
 const ease = (v: number) => v * v * (3 - 2 * v);
-const READING_START = 0.35;
+const READING_START = 0.08;
 const READING_END = 0.91;
 const LOCK_SOURCE = "narrative-reading";
 
@@ -42,14 +42,14 @@ export function NarrativeSection() {
     const captions = Array.from(visual.querySelectorAll<HTMLElement>("[data-tagline]"));
     const words = Array.from(copy.querySelectorAll<HTMLElement>("[data-narrative-word]")).map(el => ({
       el, dx: Number(el.dataset.driftX), dy: Number(el.dataset.driftY), rot: Number(el.dataset.driftRot),
-      cx: 0, cy: 0, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0,
+      cx: 0, cy: 0, exitX: 0, exitY: 0, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0,
     }));
     let target = 0, current = 0, previous = 0, speed = 0, raf = 0, last = 0;
     let top = 0, travel = 1, width = 1, height = 1, viewTop = 0, viewLeft = 0;
     let visible = false, disposed = false;
     let mx = -9999, my = -9999, mouseVX = 0, mouseVY = 0;
     let reading = false, readingDone = false;
-    let taglineCurrent = 0;
+    let taglineProgress = 0;
     let direction = 1, smoothDirection = 1;
     let inputDistance = 0, inputVelocity = 0, touchY: number | null = null;
     const externalLocks = new Set<string>();
@@ -74,7 +74,7 @@ export function NarrativeSection() {
       const dt = Math.min(0.05, Math.max(0.001, (time - (last || time - 16.67)) / 1000));
       last = time;
       const step = (target - current) * (1 - Math.exp(-dt / 0.075));
-      current += reading ? Math.max(-dt * 0.06, Math.min(dt * 0.06, step)) : step;
+      current += reading ? Math.max(-dt * 0.2, Math.min(dt * 0.2, step)) : step;
       if (Math.abs(target - current) < 0.00001) current = target;
       // Viewports/second makes the response consistent across section lengths.
       // Ease into acceleration, then coast back to idle more slowly.
@@ -88,21 +88,20 @@ export function NarrativeSection() {
       if (!reading && Math.abs(current - previous) > 0.00001) direction = Math.sign(current - previous);
       previous = current;
       smoothDirection += (direction - smoothDirection) * (1 - Math.exp(-dt / 0.12));
-      // Both layers are scroll-driven, but the tagline has its own eased
-      // progress so it trails the burst instead of changing on a timer.
       const p = current;
-      const taglineTarget = clamp((p - 0.29) / 0.66);
-      taglineCurrent += (taglineTarget - taglineCurrent) * (1 - Math.exp(-dt / 0.18));
+      // The burst follows scroll velocity; the caption trails on its own, calmer track.
+      taglineProgress += (p - taglineProgress) * (1 - Math.exp(-dt / 0.48));
       const entrance = ease(phase(p, 0, 0.065));
-      const fade = 1 - ease(phase(p, 0.205, 0.285));
       const rise = (1 - entrance) * height * 0.34;
-      copy.style.opacity = String(entrance * fade);
+      copy.style.opacity = String(entrance);
       copy.style.transform = "translate3d(0," + rise + "px,0)";
-      const scatter = phase(p, 0.065, 0.225);
+      // Hold the fully revealed copy briefly before sending each word off-canvas.
+      const scatter = phase(p, 0.18, 0.36);
       const factor = Math.pow(scatter, 1.35) * 3.5;
       const scale = Math.min(1, width / 1000, height / 650);
       const recall = Math.min(1, Math.pow(scatter, 1.2) * 1.6);
-      if (fade > 0) for (const word of words) {
+      const exitBlend = ease(scatter);
+      for (const word of words) {
         const dx = word.cx + word.tx - mx, dy = word.cy + rise + word.ty - my;
         const distance = Math.hypot(dx, dy);
         if (finePointer.matches && scatter > 0.04 && distance > 0.1 && distance < 160) {
@@ -114,31 +113,31 @@ export function NarrativeSection() {
         word.x = Math.max(-500, Math.min(500, word.x + word.vx * dt * 60));
         word.y = Math.max(-400, Math.min(400, word.y + word.vy * dt * 60));
         if (scatter <= 0.001) word.x = word.y = word.vx = word.vy = 0;
-        word.tx = word.dx * factor * scale + word.x * recall;
-        word.ty = word.dy * factor * scale + word.y * recall;
-        word.el.style.transform = "translate3d(" + word.tx + "px," + word.ty + "px,0) rotate(" + (word.rot * factor + word.x * recall * 0.04) + "deg)";
+        word.tx = word.dx * factor * scale * (1 - exitBlend) + word.exitX * exitBlend + word.x * recall * (1 - scatter);
+        word.ty = word.dy * factor * scale * (1 - exitBlend) + word.exitY * exitBlend + word.y * recall * (1 - scatter);
+        word.el.style.transform = "translate3d(" + word.tx + "px," + word.ty + "px,0) rotate(" + (word.rot * factor * (1 - exitBlend) + word.x * recall * (1 - scatter) * 0.04) + "deg)";
       }
       mouseVX *= Math.pow(0.85, dt * 60); mouseVY *= Math.pow(0.85, dt * 60);
-      const reveal = ease(phase(p, 0.225, 0.345));
-      const intensity = reveal * (1 - ease(phase(p, 0.855, 0.94)));
-      burst.draw(dt, intensity, speed, smoothDirection, reveal);
-      captions.forEach((caption, i) => {
-        const captionProgress = taglineCurrent;
-        const start = i * 0.31;
-        const enter = ease(phase(captionProgress, start, start + 0.07));
-        const leave = ease(phase(captionProgress, start + 0.22, start + 0.31));
+      const reveal = ease(phase(p, 0.36, 0.53));
+      const burstExit = ease(phase(taglineProgress, 0.78, 0.87));
+      const intensity = reveal * (1 - ease(phase(taglineProgress, 0.87, 0.88)));
+      burst.draw(dt, intensity, speed, smoothDirection, reveal, burstExit);
+      captions.forEach(caption => {
+        const enter = ease(phase(taglineProgress, 0.54, 0.62));
+        const leave = ease(phase(taglineProgress, 0.7, 0.78));
         caption.style.opacity = String(enter * (1 - leave));
         caption.style.transform = "translate3d(0," + ((1 - enter) * 18 - leave * 12) + "px,0)";
       });
-      visual.style.setProperty("--window-progress", String(ease(phase(p, 0.895, 0.99))));
+      visual.style.setProperty("--window-progress", String(ease(phase(p, 0.91, 0.99))));
       // Reveal the overlapping globe as the portal finishes covering the screen.
       visual.style.opacity = String(1 - ease(phase(p, 0.98, 1)));
-      const leavingReading = (direction < 0 && target <= 0.29) || (direction > 0 && target >= READING_END);
-      if (reading && Math.abs(current - target) < 0.00001 && leavingReading) {
+      const leavingReading = (direction < 0 && target <= READING_START) || (direction > 0 && target >= READING_END);
+      const captionCleared = direction > 0 ? taglineProgress >= 0.89 : taglineProgress <= READING_START + 0.01;
+      if (reading && Math.abs(current - target) < 0.00001 && leavingReading && captionCleared) {
         readingDone = target >= READING_END;
         finishReading(current);
       }
-      if (intensity > 0 || p < 0.29 || current !== target || speed > 0.001) raf = requestAnimationFrame(render);
+      if (intensity > 0 || p < 0.53 || current !== target || speed > 0.001 || Math.abs(taglineProgress - p) > 0.001) raf = requestAnimationFrame(render);
     };
     const wake = () => { if (!raf && visible && !reduced.matches && !document.hidden && !disposed) raf = requestAnimationFrame(render); };
     const scroll = () => {
@@ -152,6 +151,7 @@ export function NarrativeSection() {
         reading = true; inputDistance = 0;
         direction = enteringReverse ? -1 : 1;
         current = target = previous = enteringReverse ? READING_END : READING_START;
+        taglineProgress = current;
         setReadingLock(true);
         scroller.scrollTop = top + travel * current;
       }
@@ -171,6 +171,15 @@ export function NarrativeSection() {
         let node: HTMLElement | null = word.el;
         while (node && node !== visual) { x += node.offsetLeft; y += node.offsetTop; node = node.offsetParent as HTMLElement | null; }
         word.cx = x; word.cy = y;
+        let dx = x - width / 2, dy = y - height / 2;
+        let distance = Math.hypot(dx, dy);
+        if (distance < 1) { dx = word.dx; dy = word.dy; distance = Math.hypot(dx, dy) || 1; }
+        const ux = dx / distance, uy = dy / distance;
+        const edgeX = (width / 2 + word.el.offsetWidth / 2 + 32) / Math.max(Math.abs(ux), 0.0001);
+        const edgeY = (height / 2 + word.el.offsetHeight / 2 + 32) / Math.max(Math.abs(uy), 0.0001);
+        const exitDistance = Math.max(0, Math.min(edgeX, edgeY) - distance);
+        word.exitX = ux * exitDistance;
+        word.exitY = uy * exitDistance;
       });
       visual.style.setProperty("--portal-scale-x", String(width / Math.min(width * 0.22, 240) * 1.6));
       visual.style.setProperty("--portal-scale-y", String(height / Math.min(height * 0.28, 290) * 1.8));
@@ -193,7 +202,7 @@ export function NarrativeSection() {
       direction = nextDirection;
       const distance = Math.min(height * 3, Math.abs(delta));
       inputDistance += distance;
-      target = Math.max(0.29, Math.min(READING_END, target + direction * distance / height * 0.7));
+      target = Math.max(READING_START, Math.min(READING_END, target + direction * distance / height * 0.7));
       wake();
     };
     const wheel = (event: WheelEvent) => {
@@ -282,7 +291,7 @@ export function NarrativeSection() {
           ))}
         </div>
         <div className={styles.taglines}>
-          {taglines.map(text => <p key={text} data-tagline className={styles.tagline}>{text}</p>)}
+          <p data-tagline className={styles.tagline}>{tagline}</p>
         </div>
         <div className={styles.window} aria-hidden="true" />
       </div>

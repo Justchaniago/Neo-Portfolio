@@ -20,7 +20,7 @@ export function createRadialBurst(canvas: HTMLCanvasElement) {
         veil.addColorStop(1, "rgba(0,0,0,0)");
       }
     },
-    draw(dt: number, intensity: number, speed: number, direction: number, reveal: number) {
+    draw(dt: number, intensity: number, speed: number, direction: number, reveal: number, exit = 0) {
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
@@ -32,7 +32,9 @@ export function createRadialBurst(canvas: HTMLCanvasElement) {
       for (let i = 0; i < (width < 600 ? 128 : rays.length); i++) {
         const ray = rays[i];
         const position = ray.phase + clock * (0.55 + ray.depth * 0.7);
-        const t = position - Math.floor(position);
+        const cycle = position - Math.floor(position);
+        // During the outro, finish every active ray outward instead of recycling it.
+        const t = cycle + (1 - cycle) * exit;
         const radius = (28 + Math.pow(t, 2 + warp * 0.6) * extent) * (0.12 + reveal * 0.88);
         const length = (8 + t * t * (width < 600 ? 115 : 230)) * (0.4 + ray.depth * 0.6) * reveal * (1 + warp * 3.8);
         const alpha = intensity * Math.min(1, t * 5) * Math.min(1, (1 - t) * 7) * (0.25 + ray.depth * 0.65);

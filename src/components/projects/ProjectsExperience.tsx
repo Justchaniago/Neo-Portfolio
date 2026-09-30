@@ -8,6 +8,7 @@ import { ProjectRail } from "./ProjectRail";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
 import { NarrativeSection } from "@/components/narrative/NarrativeSection";
 import { AsciiGlobeSection } from "@/components/narrative/AsciiGlobeSection";
+import { TaglineSection } from "@/components/narrative/TaglineSection";
 import { StaticPagesExperience } from "@/components/pages/StaticPagesExperience";
 
 const setProjectScrollLock = (locked: boolean) => {
@@ -159,6 +160,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     </div>
     <NarrativeSection />
     <AsciiGlobeSection />
+    <TaglineSection />
     <StackSection
       sectionRef={layer}
       surfacePathRef={surfacePath}

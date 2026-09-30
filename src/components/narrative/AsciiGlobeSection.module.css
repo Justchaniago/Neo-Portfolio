@@ -1,4 +1,4 @@
-.section { position: relative; z-index: 0; margin-top: -100dvh; height: 280dvh; background: #fff; color: #16191c; }
+.section { position: relative; z-index: 0; margin-top: -100dvh; height: 520dvh; background: #fff; color: #16191c; }
 .stickyContainer { position: sticky; top: 0; width: 100%; height: 100dvh; overflow: hidden; }
 .canvas { display: block; width: 100%; height: 100%; }
 .caption { position: absolute; bottom: max(24px, env(safe-area-inset-bottom)); width: 100%; margin: 0; padding-inline: 20px; text-align: center; font-size: clamp(10px, 1vw, 12px); letter-spacing: .06em; color: #62666a; }
@@ -8,7 +8,7 @@
 .fallback { position: absolute; top: 48%; width: 100%; padding: 24px; text-align: center; }
 .accessible { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 767px) {
-  .section { height: 240dvh; }
+  .section { height: 480dvh; }
   .caption { bottom: max(108px, calc(env(safe-area-inset-bottom) + 92px)); }
 }
 @media (prefers-reduced-motion: reduce) { .section { height: 100dvh; margin-top: 0; } }
