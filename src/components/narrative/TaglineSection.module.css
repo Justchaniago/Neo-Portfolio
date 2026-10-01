@@ -1,11 +1,11 @@
-.section { position: relative; z-index: 1; height: 500dvh; margin-top: -153dvh; background: transparent; color: #111; }
+.section { position: relative; z-index: 1; height: 650dvh; margin-top: -153dvh; background: transparent; color: #111; }
 .stage { position: sticky; top: 0; display: flex; align-items: center; width: 100%; height: 100dvh; overflow: hidden; }
 .title { position: absolute; top: 0; left: 0; width: max-content; margin: 0; font-family: "Space Grotesk", "Google Sans Flex", sans-serif; font-size: clamp(6.75rem, 21vw, 21rem); font-weight: 500; letter-spacing: -0.055em; line-height: 0.92; white-space: nowrap; will-change: transform; }
 .line { display: block; white-space: nowrap; }
 .line > span { display: inline-block; white-space: pre; will-change: transform; }
 @media (prefers-reduced-motion: reduce) {
-  .section { height: 100dvh; margin-top: 0; }
-  .stage { position: relative; }
+  .section { height: 200dvh; margin-top: 0; }
+  .stage { position: relative; overflow: visible; }
   .title { top: 50%; left: 50%; width: max-content; font-size: clamp(1rem, 4vw, 2.5rem); transform: translate3d(-50%, -50%, 0) !important; will-change: auto; }
   .line > span { will-change: auto; }
 }

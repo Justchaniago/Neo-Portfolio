@@ -1,0 +1,60 @@
+.root { display: none; }
+.trigger, .close {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 48px; height: 48px; padding: 0; border: 0;
+  background: transparent; color: inherit; cursor: pointer;
+  pointer-events: auto; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon { display: flex; flex-direction: column; gap: 7px; width: 24px; }
+.icon > span { width: 24px; height: 1.5px; background: currentColor; }
+.layer { position: fixed; z-index: 90; inset: 0; isolation: isolate; mix-blend-mode: normal; color: #151515; }
+.scrim {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+  background: rgb(0 0 0 / 28%); touch-action: none;
+  animation: veilIn 440ms ease both;
+}
+.panel {
+  position: absolute; inset: 0 0 0 auto;
+  display: flex; flex-direction: column; box-sizing: border-box;
+  width: min(82vw, 390px);
+  padding: max(12px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) 24px;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: #fafaf8; color: #151515;
+  box-shadow: -12px 0 36px rgb(0 0 0 / 12%);
+  font-family: Arial, Helvetica, sans-serif;
+  animation: panelIn 440ms cubic-bezier(.22, 1, .36, 1) both;
+}
+.panelTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.eyebrow { margin: 0; font-size: .75rem; letter-spacing: .06em; color: #666; }
+.links { display: flex; flex-direction: column; margin-block: clamp(32px, 14dvh, 128px) 40px; }
+.link {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 84px; padding-block: 16px; border-bottom: 1px solid #dededb;
+  color: inherit; text-decoration: none;
+  font-size: clamp(2rem, 9vw, 3.25rem); line-height: 1.1;
+  font-weight: 600; letter-spacing: -.055em; touch-action: manipulation;
+}
+.link span { min-width: 0; overflow-wrap: anywhere; }
+.arrow { flex-shrink: 0; width: 24px; height: 24px; color: #777; stroke-width: 1.5; }
+.caption { margin: auto 0 0; padding-top: 24px; font-size: .875rem; font-weight: 600; letter-spacing: -.025em; }
+.trigger:focus-visible, .close:focus-visible, .link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.link:active { color: #666; }
+.layer[data-closing="true"] { pointer-events: none; }
+.layer[data-closing="true"] .panel { animation: panelOut 360ms cubic-bezier(.4, 0, .2, 1) both; }
+.layer[data-closing="true"] .scrim { animation: veilOut 360ms ease both; }
+@keyframes panelIn { from { transform: translateX(105%); } to { transform: translateX(0); } }
+@keyframes panelOut { from { transform: var(--exit-transform, translateX(0)); } to { transform: translateX(105%); } }
+@keyframes veilIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes veilOut { from { opacity: var(--exit-opacity, 1); } to { opacity: 0; } }
+@media (max-width: 767px) {
+  .root { display: block; }
+  :global(html[data-footer-active="true"]) .trigger { opacity: 0; visibility: hidden; pointer-events: none; }
+}
+@media (max-height: 500px) {
+  .links { margin-block: 20px; }
+  .link { min-height: 60px; padding-block: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel, .scrim, .layer[data-closing="true"] .panel, .layer[data-closing="true"] .scrim { animation-duration: 0.01ms; }
+}

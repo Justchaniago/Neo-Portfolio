@@ -1,0 +1,80 @@
+.cardShadow {
+  position: absolute;
+  z-index: 1;
+  inset: 3.5% 3%;
+  border-radius: 32px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 102%, 0);
+  box-shadow:
+    0 -2px 5px 0 rgb(0 0 0 / 38%),
+    0 -10px 20px 1px rgb(0 0 0 / 30%),
+    0 -22px 42px -6px rgb(0 0 0 / 18%);
+}
+
+@media (min-width: 768px) {
+  .cardShadow {
+    box-shadow:
+      0 -3px 7px 0 rgb(0 0 0 / 42%),
+      0 -14px 28px 2px rgb(0 0 0 / 32%),
+      0 -32px 60px -8px rgb(0 0 0 / 20%);
+  }
+}
+
+.panel {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: #000;
+  pointer-events: auto;
+  transform: translate3d(0, 102%, 0);
+  clip-path: inset(3.5% 3% round 32px);
+}
+
+.wordmark {
+  position: absolute;
+  pointer-events: none;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 2%;
+  display: flex;
+  justify-content: space-between;
+  width: 96%;
+  color: #fff;
+  font-family: "DRUNKFONTS", sans-serif;
+  font-size: min(44dvh, 24vw);
+  font-weight: 400;
+  font-synthesis: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.glyphMask {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  overflow: hidden;
+  /* Preserve glyph overshoot while masking the entrance below the baseline. */
+  padding: 0.12em 0.02em;
+  margin: -0.12em -0.02em;
+}
+
+.glyph {
+  display: block;
+  transform: translate3d(0, 135%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardShadow { display: none; }
+  .glyph { transform: none; }
+  .panel {
+    top: 100%;
+    bottom: auto;
+    height: 100dvh;
+    transform: none !important;
+    clip-path: none !important;
+    will-change: auto !important;
+  }
+}

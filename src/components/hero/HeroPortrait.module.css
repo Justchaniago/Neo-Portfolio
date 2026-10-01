@@ -74,7 +74,7 @@
 
 @media (max-width: 767px) {
   .portrait {
-    width: min(220vw, 140dvh);
+    width: min(165vw, 105dvh);
     cursor: pointer;
     pointer-events: auto;
   }

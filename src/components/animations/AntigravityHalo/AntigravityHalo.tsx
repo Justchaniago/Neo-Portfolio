@@ -17,6 +17,7 @@ export interface AntigravityHaloProps {
   color2?: string; // Deep velvet burgundy
   color3?: string; // Rich burgundy accent
   idleDrift?: boolean;
+  pointerScope?: "window" | "local";
 }
 
 export function AntigravityHalo({
@@ -31,6 +32,7 @@ export function AntigravityHalo({
   color2 = "#a01838",
   color3 = "#dfa13d",
   idleDrift = true,
+  pointerScope = "window",
 }: AntigravityHaloProps) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -40,7 +42,8 @@ export function AntigravityHalo({
     if (!container) return;
 
     // Check reduced motion
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let prefersReducedMotion = reducedMotion.matches;
 
     // Dimensions
     let width = container.clientWidth || window.innerWidth;
@@ -177,6 +180,7 @@ export function AntigravityHalo({
 
     // Pointer event handlers - continuous tracking across the full window
     const updatePointerFromClient = (clientX: number, clientY: number) => {
+      if (prefersReducedMotion || !isVisible || document.hidden) return;
       const rect = container.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
       isMouseActive = true;
@@ -220,11 +224,15 @@ export function AntigravityHalo({
       isMouseActive = false;
     };
 
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
-    container.addEventListener("pointerleave", handlePointerLeave);
+    // Include sibling footer content in the local interaction surface.
+    const pointerTarget = pointerScope === "local" ? container.parentElement ?? container : window;
+    pointerTarget.addEventListener("pointermove", handlePointerMove as EventListener, { passive: true });
+    pointerTarget.addEventListener("touchstart", handleTouchStart as EventListener, { passive: true });
+    pointerTarget.addEventListener("touchmove", handleTouchMove as EventListener, { passive: true });
+    pointerTarget.addEventListener("touchend", handleTouchEnd, { passive: true });
+    pointerTarget.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+    const leaveTarget = pointerScope === "local" ? pointerTarget : container;
+    leaveTarget.addEventListener("pointerleave", handlePointerLeave);
 
     // Responsive Resize
     const handleResize = () => {
@@ -242,17 +250,20 @@ export function AntigravityHalo({
       uniforms.uRingWidth.value = getBaseRingWidth();
       uniforms.uRingWidth2.value = getBaseRingWidth2();
       uniforms.uRingDisplacement.value = getBaseRingDisplacement();
+      if (prefersReducedMotion) syncAnimation();
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
 
     // Intersection Observer to stop animation when out of view
-    let isVisible = true;
+    let isVisible = false;
     const intersectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           isVisible = entry.isIntersecting;
+          if (!isVisible) isMouseActive = false;
+          syncAnimation();
         });
       },
       { threshold: 0 }
@@ -261,12 +272,11 @@ export function AntigravityHalo({
 
     // Animation Loop
     const startTime = performance.now();
-    let animFrameId: number;
+    let animFrameId = 0;
 
     const animate = () => {
-      animFrameId = requestAnimationFrame(animate);
-
-      if (!isVisible) return;
+      animFrameId = 0;
+      if (!isVisible || document.hidden) return;
 
       const elapsedTime = prefersReducedMotion ? 1.0 : (performance.now() - startTime) * 0.001;
       uniforms.uTime.value = elapsedTime;
@@ -333,19 +343,33 @@ export function AntigravityHalo({
       uniforms.uRingPos.value.copy(ringPos);
 
       renderer.render(scene, camera);
+      if (!prefersReducedMotion) animFrameId = requestAnimationFrame(animate);
     };
 
-
-
-    animate();
+    const syncAnimation = () => {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = 0;
+      prefersReducedMotion = reducedMotion.matches;
+      if (prefersReducedMotion) {
+        isMouseActive = false;
+        uniforms.uRingRadius.value = getBaseRingRadius();
+      }
+      if (isVisible && !document.hidden) animFrameId = requestAnimationFrame(animate);
+    };
+    document.addEventListener("visibilitychange", syncAnimation);
+    reducedMotion.addEventListener("change", syncAnimation);
 
     // Cleanup
     return () => {
       cancelAnimationFrame(animFrameId);
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-      container.removeEventListener("pointerleave", handlePointerLeave);
+      pointerTarget.removeEventListener("pointermove", handlePointerMove as EventListener);
+      pointerTarget.removeEventListener("touchstart", handleTouchStart as EventListener);
+      pointerTarget.removeEventListener("touchmove", handleTouchMove as EventListener);
+      pointerTarget.removeEventListener("touchend", handleTouchEnd);
+      pointerTarget.removeEventListener("touchcancel", handleTouchEnd);
+      document.removeEventListener("visibilitychange", syncAnimation);
+      reducedMotion.removeEventListener("change", syncAnimation);
+      leaveTarget.removeEventListener("pointerleave", handlePointerLeave);
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
 
@@ -370,6 +394,7 @@ export function AntigravityHalo({
     color2,
     color3,
     idleDrift,
+    pointerScope,
   ]);
 
   return (
