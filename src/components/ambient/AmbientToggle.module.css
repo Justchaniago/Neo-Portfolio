@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  width: 140px;
+  width: 152px;
   color: inherit;
   background: transparent;
   border: 0;
@@ -17,17 +17,15 @@
   touch-action: manipulation;
   opacity: 0;
   clip-path: inset(0 100% 0 0);
+  transition: width 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggle[data-playing="true"] {
+  width: clamp(220px, 24vw, 310px);
 }
 
 :global(html[data-splash-complete="true"]) .toggle {
   animation: ambientEntrance 950ms cubic-bezier(0.16, 1, 0.3, 1) 940ms forwards;
-}
-
-:global(html[data-footer-active="true"]) .toggle {
-  opacity: 0 !important;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 200ms ease, visibility 0s linear 200ms;
 }
 
 @keyframes ambientEntrance {
@@ -50,11 +48,21 @@
   justify-content: center;
   width: 112px;
   height: 28px;
+  transition: width 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggle:hover .lineWrap,
+.toggle:focus-visible .lineWrap {
+  width: 140px;
+}
+
+.toggle[data-playing="true"] .lineWrap {
+  width: clamp(200px, 22vw, 280px);
 }
 
 .waveSvg {
   display: block;
-  width: 112px;
+  width: 100%;
   height: 28px;
   overflow: visible;
 }

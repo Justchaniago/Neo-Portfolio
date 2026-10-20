@@ -61,8 +61,9 @@ export function AmbientToggle() {
     const timeData = player ? new Uint8Array(player.analyser.fftSize) : null;
     const freqData = player ? new Uint8Array(player.analyser.frequencyBinCount) : null;
 
-    // Control points for organic spline interpolation
-    const N = 16;
+    // Control points for organic spline interpolation across the wide 240px harp string
+    const N = 28;
+    const W = 240;
     const smoothMain = new Float32Array(N + 1);
     const smoothBurgundy = new Float32Array(N + 1);
     const smoothGold = new Float32Array(N + 1);
@@ -118,9 +119,9 @@ export function AmbientToggle() {
 
       for (let i = 0; i <= N; i++) {
         const t = i / N;
-        // Perfect sine envelope pinning both ends exactly at (0, 14) and (112, 14)
+        // Perfect sine envelope pinning both ends exactly at (0, 14) and (W, 14)
         const envelope = Math.sin(t * Math.PI);
-        const x = t * 112;
+        const x = t * W;
 
         if (i === 0 || i === N || reduced.matches) {
           smoothMain[i] = 0;
@@ -135,22 +136,22 @@ export function AmbientToggle() {
         // Real-time audio sample or gentle hover preview oscillation
         const timeIndex = timeData ? Math.floor(t * (timeData.length - 1)) : 0;
         const audioSample = isAudioActive && timeData ? ((timeData[timeIndex] - 128) / 128) * pauseProgress : 0;
-        const freqIndex = Math.floor((t <= 0.5 ? t * 2 : (1 - t) * 2) * 16);
+        const freqIndex = Math.floor((t <= 0.5 ? t * 2 : (1 - t) * 2) * 20);
         const freqBoost = isAudioActive && freqData ? (freqData[freqIndex] / 255) * pauseProgress : 0.18 * pauseProgress;
 
         // 1. Main White Wave (Primary presence)
-        const mainPulse = Math.sin(phase * 1.2 + t * Math.PI * 3) * (0.3 + energyLevel * 0.7);
-        const targetMain = (audioSample * 1.5 + mainPulse * 0.6 + freqBoost * 0.4) * 11 * Math.pow(envelope, 1.1) * pauseProgress;
+        const mainPulse = Math.sin(phase * 1.2 + t * Math.PI * 3.5) * (0.3 + energyLevel * 0.7);
+        const targetMain = (audioSample * 1.55 + mainPulse * 0.6 + freqBoost * 0.45) * 11.5 * Math.pow(envelope, 1.15) * pauseProgress;
         smoothMain[i] += (targetMain - smoothMain[i]) * (status === "pausing" ? 0.12 : 0.16);
 
         // 2. Burgundy Wave (Counter-harmonic opposite flow)
-        const burgundyCounter = Math.sin(-phase * 1.4 + t * Math.PI * 2.5 + 1.2) * (0.35 + energyLevel * 0.65);
-        const targetBurgundy = (-audioSample * 1.2 + burgundyCounter * 0.75 - freqBoost * 0.3) * 8.5 * Math.pow(envelope, 1.25) * pauseProgress;
+        const burgundyCounter = Math.sin(-phase * 1.4 + t * Math.PI * 3.0 + 1.2) * (0.35 + energyLevel * 0.65);
+        const targetBurgundy = (-audioSample * 1.25 + burgundyCounter * 0.75 - freqBoost * 0.3) * 9.0 * Math.pow(envelope, 1.25) * pauseProgress;
         smoothBurgundy[i] += (targetBurgundy - smoothBurgundy[i]) * (status === "pausing" ? 0.1 : 0.14);
 
         // 3. Gold Wave (Counter harmonic offset & subtle micro-dance)
-        const goldCounter = Math.cos(phase * 1.5 - t * Math.PI * 3.5 + 0.6) * (0.3 + energyLevel * 0.6);
-        const targetGold = (audioSample * 0.8 * Math.cos(t * Math.PI * 2) + goldCounter * 0.7) * 7.5 * Math.pow(envelope, 1.3) * pauseProgress;
+        const goldCounter = Math.cos(phase * 1.5 - t * Math.PI * 4.0 + 0.6) * (0.3 + energyLevel * 0.6);
+        const targetGold = (audioSample * 0.85 * Math.cos(t * Math.PI * 2.5) + goldCounter * 0.7) * 8.0 * Math.pow(envelope, 1.3) * pauseProgress;
         smoothGold[i] += (targetGold - smoothGold[i]) * (status === "pausing" ? 0.1 : 0.15);
 
         ptsMain.push([x, 14 + smoothMain[i]]);
@@ -172,7 +173,7 @@ export function AmbientToggle() {
       cancelAnimationFrame(frame);
       reduced.removeEventListener("change", restart);
       delete document.documentElement.dataset.ambientEnergy;
-      const flat = "M0,14 C28,14 84,14 112,14";
+      const flat = `M0,14 C${W * 0.25},14 ${W * 0.75},14 ${W},14`;
       waveMain?.setAttribute("d", flat);
       waveBurgundy?.setAttribute("d", flat);
       waveGold?.setAttribute("d", flat);
@@ -279,12 +280,12 @@ export function AmbientToggle() {
       onClick={() => void toggle()}
     >
       <span className={styles.lineWrap}>
-        <svg className={styles.waveSvg} viewBox="0 0 112 28" width="112" height="28" aria-hidden="true">
+        <svg className={styles.waveSvg} viewBox="0 0 240 28" preserveAspectRatio="none" width="240" height="28" aria-hidden="true">
           {/* Subtle background threads (Burgundy & Gold) counter-flowing */}
-          <path ref={pathBurgundy} className={styles.waveBurgundy} d="M0 14 H112" fill="none" stroke="#901a35" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-          <path ref={pathGold} className={styles.waveGold} d="M0 14 H112" fill="none" stroke="#dfa13d" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+          <path ref={pathBurgundy} className={styles.waveBurgundy} d="M0 14 H240" fill="none" stroke="#901a35" strokeWidth="1.15" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+          <path ref={pathGold} className={styles.waveGold} d="M0 14 H240" fill="none" stroke="#dfa13d" strokeWidth="1.15" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
           {/* Primary White Waveform */}
-          <path ref={pathMain} className={styles.waveMain} d="M0 14 H112" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path ref={pathMain} className={styles.waveMain} d="M0 14 H240" fill="none" stroke="currentColor" strokeWidth="1.65" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
       <span className={styles.labelContainer} aria-live="polite">
