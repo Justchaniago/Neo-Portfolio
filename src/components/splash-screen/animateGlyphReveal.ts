@@ -98,15 +98,16 @@ export function animateGlyphReveal(root: HTMLElement, onComplete: () => void) {
         }
         return { paths, total, distance, outline, ink };
       });
-      timeline.addLabel("fill", "+=0.08");
+      timeline.addLabel("fill", "+=0.05");
       for (const { paths, total, distance, outline, ink } of groups) {
-        let elapsed = distance * 0.028;
-        for (const path of paths) {
-          const duration = FILL_DURATION * path.length / total;
-          timeline.to(path.fill, { attr: { "stroke-dashoffset": 0 }, duration, ease: "power1.inOut" }, "fill+=" + elapsed);
-          elapsed += duration;
-          timeline.set(path.fill, { attr: { "stroke-dasharray": "none" } }, "fill+=" + elapsed);
-        }
+        let elapsed = distance * 0.026;
+        paths.forEach((path, pathIndex) => {
+          const duration = Math.max(0.14, FILL_DURATION * path.length / total);
+          const offset = pathIndex > 0 ? Math.max(0, elapsed - duration) : elapsed;
+          timeline.to(path.fill, { attr: { "stroke-dashoffset": 0 }, duration, ease: "power1.inOut" }, "fill+=" + offset);
+          timeline.set(path.fill, { attr: { "stroke-dasharray": "none" } }, "fill+=" + (offset + duration));
+          elapsed = Math.max(elapsed, offset + duration);
+        });
         // Completed fill remains the same geometry, with no DOM/text swap.
         timeline.set(outline, { visibility: "hidden" }, "fill+=" + elapsed);
         timeline.call(() => ink.removeAttribute("mask"), [], "fill+=" + elapsed);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import Lenis from "lenis";
 import { AntigravityHalo } from "@/components/animations/AntigravityHalo";
 import { HeroPortrait } from "@/components/hero/HeroPortrait";
@@ -21,26 +21,36 @@ export default function Home() {
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const scrollLocks = new Set<string>();
-    let previousOverflowY = scroller.style.overflowY;
     const setScrollLock = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: string; locked?: boolean }>).detail;
       const source = detail?.source;
       if (!source) return;
 
       if (detail.locked) {
-        if (scrollLocks.size === 0) previousOverflowY = scroller.style.overflowY;
         scrollLocks.add(source);
       } else {
         scrollLocks.delete(source);
       }
 
       const locked = scrollLocks.size > 0;
-      scroller.style.overflowY = locked ? "hidden" : previousOverflowY;
-      if (locked) lenisRef.current?.stop();
-      else lenisRef.current?.start();
+      if (locked) {
+        scroller.style.overflowY = "hidden";
+        lenisRef.current?.stop();
+      } else {
+        scroller.style.removeProperty("overflow-y");
+        lenisRef.current?.start();
+      }
     };
     const goHome = () => {
-      if (lenisRef.current) {
+      const isLayerActive = Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001
+        || Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001
+        || document.documentElement.dataset.projectsActive === "true"
+        || Boolean(document.documentElement.dataset.staticSection);
+
+      if (isLayerActive) {
+        scroller.scrollTop = 0;
+        lenisRef.current?.scrollTo(0, { immediate: true, force: true });
+      } else if (lenisRef.current) {
         lenisRef.current.scrollTo(0, {
           duration: reduced.matches ? 0 : 1.15,
           force: true,
@@ -76,7 +86,7 @@ export default function Home() {
         window.removeEventListener("portfolio:go-home", goHome);
         window.removeEventListener("portfolio:scroll-lock", setScrollLock);
         scrollLocks.clear();
-        scroller.style.overflowY = previousOverflowY;
+        scroller.style.removeProperty("overflow-y");
         scroller.removeEventListener("scroll", update);
         reduced.removeEventListener("change", update);
         resizeObserver.disconnect();
@@ -117,7 +127,7 @@ export default function Home() {
       window.removeEventListener("portfolio:go-home", goHome);
       window.removeEventListener("portfolio:scroll-lock", setScrollLock);
       scrollLocks.clear();
-      scroller.style.overflowY = previousOverflowY;
+      scroller.style.removeProperty("overflow-y");
       scroller.removeEventListener("scroll", update);
       reduced.removeEventListener("change", update);
       resizeObserver.disconnect();
@@ -135,7 +145,7 @@ export default function Home() {
       <div ref={pageContent} className="min-h-full">
       <ProjectsExperience>
       <div className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden w-full">
-        <div className="absolute inset-0 z-0 pointer-events-auto">
+        <div className={`${styles.haloLayer} absolute inset-0 z-0 pointer-events-auto`}>
           <AntigravityHalo />
         </div>
 
@@ -151,8 +161,12 @@ export default function Home() {
 
         <div className={styles.heroCopy} aria-label="Freelance Software Engineer">
           <span className={styles.heroArrow} aria-hidden="true">↘</span>
-          <p>Freelance</p>
-          <p>Software Engineer</p>
+          <p className={styles.heroLineMask}>
+            <span className={styles.heroLine} style={{ "--line-index": 0 } as CSSProperties}>Freelance</span>
+          </p>
+          <p className={styles.heroLineMask}>
+            <span className={styles.heroLine} style={{ "--line-index": 1 } as CSSProperties}>Software Engineer</span>
+          </p>
         </div>
       </div>
       </ProjectsExperience>

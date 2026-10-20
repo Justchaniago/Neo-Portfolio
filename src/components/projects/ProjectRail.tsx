@@ -43,8 +43,8 @@ export function ProjectRail({ onChange }: { onChange?: (index: number) => void }
         element.style.visibility = "visible";
       }
 
-      const reveal = clamp((progress - 0.56) / 0.36);
-      const markerProgress = clamp((progress - 0.92) / 0.08);
+      const reveal = clamp((progress - 0.28) / 0.48);
+      const markerProgress = clamp((progress - 0.70) / 0.25);
       rows.forEach((row, position) => {
         const offset = SLOTS[position];
         const rowReveal = clamp((reveal - position * 0.105) / 0.24);
@@ -64,7 +64,7 @@ export function ProjectRail({ onChange }: { onChange?: (index: number) => void }
       gsap.set(marker, { autoAlpha: markerProgress, x: (1 - markerProgress) * 24 });
       gsap.set(underline, { scaleX: mobile.matches ? markerProgress : 0 });
 
-      const railReady = progress >= 0.999;
+      const railReady = progress >= 0.38;
       if (railReady !== ready) {
         ready = railReady;
         document.documentElement.dataset.projectRailReady = String(railReady);

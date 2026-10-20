@@ -19,7 +19,8 @@
 
 .surfacePath {
   fill: var(--stack-surface, #0a0a0a);
-  filter: drop-shadow(0 -12px 24px rgb(0 0 0 / var(--stack-shadow-alpha, 0.18)));
+  stroke-width: 1.5px;
+  filter: drop-shadow(0 -24px 48px rgb(0 0 0 / var(--stack-shadow-alpha, 0.28)));
 }
 
 .content {

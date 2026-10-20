@@ -3,6 +3,9 @@
   display: flex;
   flex: 0 0 100dvh;
   min-height: 100dvh;
+  overflow: hidden;
+  background: #fff;
+  will-change: transform, filter;
 }
 
 .heroReturning {
@@ -12,6 +15,7 @@
   min-height: 100dvh;
   overflow: hidden;
   background: #fff;
+  box-shadow: 0 -24px 54px rgb(0 0 0 / 0.35);
   will-change: transform;
 }
 

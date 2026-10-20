@@ -44,16 +44,18 @@ export function AsciiGlobeSection() {
 
     const drawMap = (p: number) => {
       if (!sampler) return;
-      const zoom = phase(p, 0.32, 0.84);
+      const entrance = phase(p, 0, 0.24);
+      const zoom = phase(p, 0.34, 0.84);
       const flatten = phase(p, 0.52, 0.84);
-      const pin = phase(p, 0.84, 0.96);
-      const focus = phase(p, 0, 0.34);
-      const lon0 = mix(32, 118, focus) * RAD;
-      const lat0 = mix(14, -2.5, focus) * RAD;
+      const pin = phase(p, 0.82, 0.96);
+      const focus = phase(p, 0.06, 0.38);
+      const lon0 = mix(28, 118, focus) * RAD;
+      const lat0 = mix(16, -2.5, focus) * RAD;
       const sinLat = Math.sin(lat0), cosLat = Math.cos(lat0);
-      const cx = width / 2, cy = height * 0.53;
+      const cx = width / 2, cy = height * 0.52;
       const scale = Math.min((width - 32) / 50, Math.max(4, height - 190) / 22);
-      const radius = mix(Math.min(width * 0.43, height * 0.34), scale / RAD, zoom);
+      const baseRadius = Math.min(width * 0.43, height * 0.35) * (0.86 + 0.14 * entrance);
+      const radius = mix(baseRadius, scale / RAD, zoom);
       // Sample in screen space: no overlapping glyphs, projection singularities or back-face bleed.
       const cell = width < 600 ? 4 : 6;
       const row = cell * 1.25;
@@ -75,14 +77,23 @@ export function AsciiGlobeSection() {
           const lon = mix(lonSphere, 118 + (x - cx) / scale, flatten);
           const lat = mix(latSphere, -2.5 + (cy - y) / scale, flatten);
           const land = sampler(lon, lat);
-          const light = clamp(0.56 + z * 0.38 - nx * 0.2 + ny * 0.12);
+          const light = clamp(0.54 + z * 0.40 - nx * 0.22 + ny * 0.14);
           if (land) {
-            const alpha = land === 2 ? 1 : mix(0.78 + light * 0.22, 0.18, flatten);
-            ctx.fillStyle = land === 2 && zoom > 0.6 ? `rgba(115,24,48,${alpha})` : `rgba(18,22,26,${alpha})`;
-            ctx.fillText(palette[Math.min(5, Math.floor(light * 6))], x, y);
+            const isIndonesia = land === 2;
+            const alpha = isIndonesia ? 1 : mix(0.80 + light * 0.20, 0.16, flatten);
+            ctx.fillStyle = isIndonesia && zoom > 0.45
+              ? `rgba(142,20,50,${alpha})`
+              : `rgba(16,20,24,${alpha})`;
+            const glyphIndex = isIndonesia && zoom > 0.45
+              ? Math.min(5, Math.max(3, Math.floor(light * 6) + 1))
+              : Math.min(5, Math.floor(light * 6));
+            ctx.fillText(palette[glyphIndex], x, y);
           } else if (flatten < 0.99) {
-            ctx.fillStyle = `rgba(65,75,85,${(0.20 + z * 0.14) * (1 - flatten)})`;
-            ctx.fillText(".", x, y);
+            const rim = distance > 0.84 ? 1.35 : 1;
+            const graticule = (Math.abs(latSphere % 15) < 1.1 || Math.abs(lonSphere % 15) < 1.1) ? 1.3 : 1;
+            const oceanAlpha = clamp((0.18 + z * 0.15) * rim * graticule * (1 - flatten));
+            ctx.fillStyle = `rgba(60,72,84,${oceanAlpha})`;
+            ctx.fillText(distance > 0.88 ? ":" : ".", x, y);
           }
         }
       }
@@ -90,30 +101,41 @@ export function AsciiGlobeSection() {
       const py = cy - (SURABAYA.lat + 2.5) * scale;
       if (pin > 0) {
         ctx.globalAlpha = pin;
-        ctx.strokeStyle = "#a01838";
+        // Outer subtle pulse ring
+        ctx.strokeStyle = `rgba(160,24,56,${0.28 * pin})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(px, py, 11 + (1 - pin) * 12, 0, Math.PI * 2);
+        ctx.arc(px, py, 20 + (1 - pin) * 18, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.fillStyle = "#a01838";
-        ctx.font = "bold 16px monospace";
-        ctx.fillText("+", px, py);
-        const labelY = Math.min(height - 104, py + 64);
+
+        // Primary reticle ring
+        ctx.strokeStyle = "#a01838";
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.moveTo(px, py + 15);
-        ctx.lineTo(px, labelY - 12);
+        ctx.arc(px, py, 10 + (1 - pin) * 10, 0, Math.PI * 2);
         ctx.stroke();
-        label.style.left = `${Math.max(100, Math.min(width - 100, px))}px`;
+
+        ctx.fillStyle = "#a01838";
+        ctx.font = "bold 15px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.fillText("+", px, py);
+        const labelY = Math.min(height - 104, py + 62);
+        ctx.beginPath();
+        ctx.moveTo(px, py + 14);
+        ctx.lineTo(px, labelY - 14);
+        ctx.stroke();
+        label.style.left = `${Math.max(104, Math.min(width - 104, px))}px`;
         label.style.top = `${labelY}px`;
         ctx.globalAlpha = 1;
       }
       label.style.opacity = String(pin);
+      label.style.transform = `translate3d(-50%, ${(1 - pin) * 10}px, 0)`;
     };
 
     const draw = () => {
       if (!sampler) return;
       const distance = current * travel;
-      const p = reduced.matches ? 1 : clamp(distance / globeTravel);
+      const portalOffset = reduced.matches ? 0 : height * 0.86;
+      const p = reduced.matches ? 1 : clamp((distance - portalOffset) / Math.max(1, globeTravel - portalOffset));
       const extra = reduced.matches ? 0 : clamp((distance - globeTravel) / Math.max(1, height * 2.4));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (p === 1 && cached) {
@@ -125,9 +147,11 @@ export function AsciiGlobeSection() {
       sweep.draw(ctx, extra);
       const scale = Math.min((width - 32) / 50, Math.max(4, height - 190) / 22);
       const px = width / 2 + (SURABAYA.lon - 118) * scale;
-      const py = height * 0.53 - (SURABAYA.lat + 2.5) * scale;
-      label.style.opacity = String(phase(p, 0.84, 0.96) * (1 - sweep.covered(px, py, extra)));
-      caption.style.opacity = String(1 - phase(extra, 0.15, 0.24));
+      const py = height * 0.52 - (SURABAYA.lat + 2.5) * scale;
+      const pinProgress = phase(p, 0.82, 0.96) * (1 - sweep.covered(px, py, extra));
+      label.style.opacity = String(pinProgress);
+      label.style.transform = `translate3d(-50%, ${(1 - pinProgress) * 10}px, 0)`;
+      caption.style.opacity = String(phase(p, 0.18, 0.32) * (1 - phase(extra, 0.22, 0.34)));
     };
 
     const tick = (time: number) => {
@@ -146,7 +170,7 @@ export function AsciiGlobeSection() {
     const moveSurface = (event: PointerEvent) => {
       if (reduced.matches || !visible) return;
       const extra = clamp((current * travel - globeTravel) / Math.max(1, height * 2.4));
-      if (extra <= 0.15 || extra >= 0.99) { lastPointer = null; return; }
+      if (extra <= 0.24 || extra >= 0.99) { lastPointer = null; return; }
       const bounds = canvas.getBoundingClientRect();
       const x = event.clientX - bounds.left;
       const y = event.clientY - bounds.top;

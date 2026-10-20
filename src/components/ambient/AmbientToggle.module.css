@@ -20,7 +20,14 @@
 }
 
 :global(html[data-splash-complete="true"]) .toggle {
-  animation: ambientEntrance 1100ms cubic-bezier(0.16, 1, 0.3, 1) 1400ms forwards;
+  animation: ambientEntrance 950ms cubic-bezier(0.16, 1, 0.3, 1) 940ms forwards;
+}
+
+:global(html[data-footer-active="true"]) .toggle {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 200ms ease, visibility 0s linear 200ms;
 }
 
 @keyframes ambientEntrance {
@@ -65,6 +72,16 @@
 .waveGold {
   opacity: 0;
   transition: opacity 600ms ease;
+}
+
+.toggle:hover .waveBurgundy,
+.toggle:focus-visible .waveBurgundy {
+  opacity: 0.45;
+}
+
+.toggle:hover .waveGold,
+.toggle:focus-visible .waveGold {
+  opacity: 0.42;
 }
 
 .toggle[data-playing="true"] .waveBurgundy {

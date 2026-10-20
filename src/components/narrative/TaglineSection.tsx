@@ -49,7 +49,7 @@ export function TaglineSection() {
         if (active) root.dataset.footerActive = "true";
         else delete root.dataset.footerActive;
       }
-      const interactive = !overlayOpen && (reduced.matches || footerProgress >= 0.95);
+      const interactive = !overlayOpen && (reduced.matches || footerProgress >= 0.85);
       if (footer.inert !== !interactive) footer.inert = !interactive;
       const hidden = String(!interactive);
       if (footer.getAttribute("aria-hidden") !== hidden) footer.setAttribute("aria-hidden", hidden);
@@ -71,7 +71,7 @@ export function TaglineSection() {
         }
       }
       const glyphWidth = wordmarkGlyphs.reduce((sum, glyph) => sum + glyph.getBoundingClientRect().width, 0);
-      if (glyphWidth > 0) wordmark.style.fontSize = `${baseFontSize * Math.min(1, width * 0.96 * 0.99 / glyphWidth)}px`;
+      if (glyphWidth > 0) wordmark.style.fontSize = `${baseFontSize * Math.min(1, width * 0.94 * 0.985 / glyphWidth)}px`;
       footer.style.setProperty("--footer-wordmark-height", `${wordmark.offsetHeight}px`);
       const trackBounds = title.getBoundingClientRect();
       textWidth = Math.max(1, title.scrollWidth);
@@ -114,7 +114,7 @@ export function TaglineSection() {
       footerShadow.style.opacity = String(shadowIn * shadowIn * (3 - 2 * shadowIn)
         * shadowOut * shadowOut * (3 - 2 * shadowOut));
       footerShadow.style.willChange = footerProgress > 0 && footerProgress < 1 ? "transform, opacity" : "auto";
-      footer.style.setProperty("--footer-content-progress", String(Math.max(0, Math.min(1, (footerProgress - 0.6) / 0.4))));
+      footer.style.setProperty("--footer-content-progress", String(Math.max(0, Math.min(1, (footerProgress - 0.48) / 0.44))));
       syncFooterAccess();
       wordmarkEffect.update(footerProgress);
       scrollProgress = Math.min(1, scrollProgress);
@@ -131,8 +131,10 @@ export function TaglineSection() {
       const waveStrength = scrollProgress < 0 ? 0 : Math.min(1, scrollProgress / 0.08);
       for (const metric of metrics) {
         const along = metric.x / textWidth;
-        const bend = reduced.matches ? 0 : Math.sin(along * Math.PI * 2 * 1.15 - wave) * amplitude * waveStrength;
-        metric.element.style.transform = `translate3d(0, ${bend.toFixed(2)}px, 0)`;
+        const phaseAngle = along * Math.PI * 2 * 1.15 - wave;
+        const bend = reduced.matches ? 0 : Math.sin(phaseAngle) * amplitude * waveStrength;
+        const tilt = reduced.matches ? 0 : Math.cos(phaseAngle) * 3.2 * waveStrength;
+        metric.element.style.transform = `translate3d(0, ${bend.toFixed(2)}px, 0) rotate(${tilt.toFixed(2)}deg)`;
       }
     };
 

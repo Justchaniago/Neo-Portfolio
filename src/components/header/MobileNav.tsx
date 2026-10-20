@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, X } from "lucide-react";
 import styles from "./MobileNav.module.css";
 
 const sections = [
-  { label: "Project", name: "project" },
-  { label: "About", name: "about" },
-  { label: "Contact", name: "contact" },
+  { index: "01", label: "Project", name: "project" },
+  { index: "02", label: "About", name: "about" },
+  { index: "03", label: "Contact", name: "contact" },
 ] as const;
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [activeSection, setActiveSection] = useState("hero");
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const destination = useRef<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -22,16 +23,11 @@ export function MobileNav() {
 
   useEffect(() => {
     if (!open) return;
-    const main = document.querySelector<HTMLElement>("main");
     const content = document.querySelector<HTMLElement>("[data-page-content]");
     const previousInert = content?.inert ?? false;
     const trigger = buttonRef.current;
-    const previousOverflow = main?.style.overflowY ?? "";
     panelRef.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
     if (content) content.inert = true;
-    if (main) {
-      main.style.overflowY = "hidden";
-    }
     const lock = (locked: boolean) => window.dispatchEvent(new CustomEvent("portfolio:scroll-lock", {
       detail: { source: "mobile-navigation", locked },
     }));
@@ -44,9 +40,6 @@ export function MobileNav() {
       closeTimer.current = null;
       desktop.removeEventListener("change", onResize);
       if (content) content.inert = previousInert;
-      if (main) {
-        main.style.overflowY = previousOverflow;
-      }
       lock(false);
       const target = returnFocus.current ?? trigger;
       if (target?.isConnected && !target.closest("[inert]")
@@ -70,7 +63,7 @@ export function MobileNav() {
     if (scrim) scrim.style.setProperty("--exit-opacity", getComputedStyle(scrim).opacity);
     setClosing(true);
     closeTimer.current = setTimeout(() => setOpen(false),
-      matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 360);
+      matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -103,6 +96,11 @@ export function MobileNav() {
         aria-controls="mobile-navigation-panel"
         onClick={() => {
           returnFocus.current = buttonRef.current;
+          const current =
+            document.documentElement.dataset.projectsActive === "true"
+              ? "project"
+              : document.documentElement.dataset.staticSection || "hero";
+          setActiveSection(current);
           setClosing(false);
           setOpen(true);
         }}
@@ -125,14 +123,16 @@ export function MobileNav() {
           <div className={styles.panelTop}>
             <p className={styles.eyebrow}>Navigation</p>
             <button className={styles.close} type="button" aria-label="Close navigation" onClick={() => close()}>
-              <X size={24} strokeWidth={1.5} aria-hidden="true" focusable="false" />
+              <X size={22} strokeWidth={1.6} aria-hidden="true" focusable="false" />
             </button>
           </div>
           <nav className={styles.links} aria-label="Main navigation">
-            {sections.map(section => (
+            {sections.map((section, itemIndex) => (
               <a
                 key={section.name}
                 className={styles.link}
+                data-active={activeSection === section.name}
+                style={{ "--item-index": itemIndex } as CSSProperties}
                 href={section.name === "project" ? "#projects-layer" : `#${section.name}`}
                 onClick={event => {
                   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -140,12 +140,20 @@ export function MobileNav() {
                   close(section.name);
                 }}
               >
-                <span>{section.label}</span>
-                <ArrowUpRight className={styles.arrow} aria-hidden="true" focusable="false" />
+                <span className={styles.linkContent}>
+                  <span className={styles.linkIndex}>{section.index}</span>
+                  <span className={styles.linkLabel}>{section.label}</span>
+                </span>
+                <span className={styles.arrowWrap} aria-hidden="true">
+                  <ArrowUpRight className={styles.arrow} focusable="false" />
+                </span>
               </a>
             ))}
           </nav>
-          <p className={styles.caption}>chaniago.me</p>
+          <div className={styles.panelFooter}>
+            <p className={styles.caption}>chaniago.me</p>
+            <p className={styles.meta}>Creative Engineer</p>
+          </div>
         </section>
       </div>, document.body)}
     </div>

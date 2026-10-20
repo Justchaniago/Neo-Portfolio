@@ -163,7 +163,7 @@ export function HeroPortrait() {
         return;
       }
       if (document.documentElement.dataset.splashComplete !== "true") return;
-      if (mobileImageRef.current === 0) timeout = window.setTimeout(() => { void play(0, 1); }, 2000);
+      if (mobileImageRef.current === 0) timeout = window.setTimeout(() => { void play(0, 1); }, 1550);
     };
     mobileReplay.current = () => {
       if (!mobile.matches || reduced.matches) return;
@@ -182,6 +182,96 @@ export function HeroPortrait() {
       mobile.removeEventListener("change", schedule);
       reduced.removeEventListener("change", schedule);
       mobileReplay.current = () => {};
+    };
+  }, []);
+
+  // Desktop Auto-Preview Iris Sweep when Hero emerges from splash portal
+  useEffect(() => {
+    const element = root.current;
+    if (!element) return;
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let previewTimeline: gsap.core.Timeline | null = null;
+    let hasPlayedPreview = false;
+
+    const stopPreview = () => {
+      if (previewTimeline) {
+        previewTimeline.kill();
+        previewTimeline = null;
+        if (!revealedRef.current) {
+          gsap.to(element, {
+            "--radius": "0px",
+            duration: 0.38,
+            ease: "power2.out",
+            overwrite: "auto",
+          });
+        }
+      }
+    };
+
+    const runPreview = () => {
+      if (hasPlayedPreview || !desktop.matches || reduced.matches) return;
+      if (document.documentElement.dataset.splashComplete !== "true") return;
+      if (revealedRef.current) return;
+      hasPlayedPreview = true;
+
+      const rect = element.getBoundingClientRect();
+      const size = Math.min(rect.width || 600, rect.height || 600);
+      const previewRadius = Math.min(Math.max(size * 0.28, 150), 255);
+      const proxy = { x: 35, y: 40, r: 0 };
+
+      previewTimeline = gsap.timeline({
+        delay: 1.05,
+        onUpdate: () => {
+          if (revealedRef.current) {
+            stopPreview();
+            return;
+          }
+          element.style.setProperty("--origin-x", `${proxy.x}%`);
+          element.style.setProperty("--origin-y", `${proxy.y}%`);
+          element.style.setProperty("--radius", `${proxy.r}px`);
+        },
+        onComplete: () => {
+          previewTimeline = null;
+          if (!revealedRef.current) {
+            element.style.setProperty("--radius", "0px");
+          }
+        },
+      });
+
+      previewTimeline.to(proxy, {
+        r: previewRadius,
+        duration: 0.58,
+        ease: "power3.out",
+      }, 0);
+      previewTimeline.to(proxy, {
+        x: 64,
+        y: 34,
+        duration: 1.18,
+        ease: "power2.inOut",
+      }, 0);
+      previewTimeline.to(proxy, {
+        r: 0,
+        duration: 0.52,
+        ease: "power3.inOut",
+      }, 0.68);
+    };
+
+    const observer = new MutationObserver(runPreview);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-splash-complete"],
+    });
+    window.addEventListener("pointerdown", stopPreview, { passive: true });
+    runPreview();
+
+    return () => {
+      if (previewTimeline) {
+        previewTimeline.kill();
+        previewTimeline = null;
+      }
+      observer.disconnect();
+      window.removeEventListener("pointerdown", stopPreview);
     };
   }, []);
 
@@ -305,6 +395,7 @@ export function HeroPortrait() {
     if (event.pointerType === "mouse") {
       bounds.current = event.currentTarget.getBoundingClientRect();
       setOrigin(event.clientX, event.clientY);
+      revealedRef.current = true;
       setRevealed(true);
     }
   };
@@ -312,6 +403,7 @@ export function HeroPortrait() {
   const handlePointerLeave = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === "mouse") {
       bounds.current = null;
+      revealedRef.current = false;
       setRevealed(false);
     }
   };

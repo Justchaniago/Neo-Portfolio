@@ -42,7 +42,7 @@ export function ProjectDetails({ activeIndex }: { activeIndex: number }) {
     gsap.set(element, { autoAlpha: 1, y: 0 });
     const animation = gsap.fromTo(parts,
       { autoAlpha: 0, y: reduced ? 0 : 28 },
-      { autoAlpha: 1, y: 0, duration: reduced ? 0 : 0.54, delay: reduced ? 0 : 0.12, stagger: reduced ? 0 : 0.07, ease: "power3.out", clearProps: "transform" },
+      { autoAlpha: 1, y: 0, duration: reduced ? 0 : 0.54, delay: reduced ? 0 : 0.08, stagger: reduced ? 0 : 0.06, ease: "power3.out", clearProps: "transform" },
     );
     return () => { animation.kill(); };
   }, [activeIndex, railReady]);

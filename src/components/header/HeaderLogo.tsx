@@ -35,10 +35,10 @@ export function HeaderLogo() {
           </span>
         </span>
         <span className={styles.sectionMask} aria-hidden="true">
-          <span className={styles.sectionSizer}>projects</span>
-          <span className={styles.sectionLabel} data-section="project">projects</span>
-          <span className={styles.sectionLabel} data-section="about">about</span>
-          <span className={styles.sectionLabel} data-section="contact">contact</span>
+          <span className={styles.sectionSizer}>/ projects</span>
+          <span className={styles.sectionLabel} data-section="project"><span className={styles.sectionSlash}>/</span>projects</span>
+          <span className={styles.sectionLabel} data-section="about"><span className={styles.sectionSlash}>/</span>about</span>
+          <span className={styles.sectionLabel} data-section="contact"><span className={styles.sectionSlash}>/</span>contact</span>
         </span>
       </span>
     </Link>

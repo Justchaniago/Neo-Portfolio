@@ -14,6 +14,7 @@ export function AmbientToggle() {
   const operation = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status, setStatus] = useState<Status>("idle");
+  const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     const supported = window.matchMedia("(min-width: 768px)");
@@ -51,20 +52,21 @@ export function AmbientToggle() {
 
   useEffect(() => {
     const player = engine.current;
-    if (!player || (status !== "playing" && status !== "pausing")) return;
+    const isAudioActive = Boolean(player && (status === "playing" || status === "pausing"));
+    if (!isAudioActive && !hovered) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const waveMain = pathMain.current;
     const waveBurgundy = pathBurgundy.current;
     const waveGold = pathGold.current;
-    const timeData = new Uint8Array(player.analyser.fftSize);
-    const freqData = new Uint8Array(player.analyser.frequencyBinCount);
-    
+    const timeData = player ? new Uint8Array(player.analyser.fftSize) : null;
+    const freqData = player ? new Uint8Array(player.analyser.frequencyBinCount) : null;
+
     // Control points for organic spline interpolation
     const N = 16;
     const smoothMain = new Float32Array(N + 1);
     const smoothBurgundy = new Float32Array(N + 1);
     const smoothGold = new Float32Array(N + 1);
-    
+
     let frame = 0;
     let phase = 0;
 
@@ -89,21 +91,25 @@ export function AmbientToggle() {
       return d;
     };
 
-    let pauseProgress = 1;
+    let pauseProgress = isAudioActive ? 1 : 0.38;
     const draw = () => {
-      if (status === "pausing") {
+      if (!isAudioActive) {
+        pauseProgress = hovered ? Math.min(0.42, pauseProgress + 0.04) : Math.max(0, pauseProgress - 0.05);
+      } else if (status === "pausing") {
         pauseProgress = Math.max(0, pauseProgress - 0.04);
       } else {
         pauseProgress = Math.min(1, pauseProgress + 0.08);
       }
 
-      player.analyser.getByteTimeDomainData(timeData);
-      player.analyser.getByteFrequencyData(freqData);
-
-      let energy = 0;
-      for (let i = 0; i < 24; i++) energy += freqData[i];
-      const energyLevel = (energy / (24 * 255)) * pauseProgress;
-      phase += (0.045 + energyLevel * 0.055) * pauseProgress;
+      let energyLevel = 0.12 * pauseProgress;
+      if (isAudioActive && player && timeData && freqData) {
+        player.analyser.getByteTimeDomainData(timeData);
+        player.analyser.getByteFrequencyData(freqData);
+        let energy = 0;
+        for (let i = 0; i < 24; i++) energy += freqData[i];
+        energyLevel = (energy / (24 * 255)) * pauseProgress;
+      }
+      phase += (0.045 + energyLevel * 0.055) * Math.max(0.35, pauseProgress);
 
       const ptsMain: Array<[number, number]> = [];
       const ptsBurgundy: Array<[number, number]> = [];
@@ -125,11 +131,11 @@ export function AmbientToggle() {
           continue;
         }
 
-        // Real-time audio sample
-        const timeIndex = Math.floor(t * (timeData.length - 1));
-        const audioSample = ((timeData[timeIndex] - 128) / 128) * pauseProgress;
+        // Real-time audio sample or gentle hover preview oscillation
+        const timeIndex = timeData ? Math.floor(t * (timeData.length - 1)) : 0;
+        const audioSample = isAudioActive && timeData ? ((timeData[timeIndex] - 128) / 128) * pauseProgress : 0;
         const freqIndex = Math.floor((t <= 0.5 ? t * 2 : (1 - t) * 2) * 16);
-        const freqBoost = (freqData[freqIndex] / 255) * pauseProgress;
+        const freqBoost = isAudioActive && freqData ? (freqData[freqIndex] / 255) * pauseProgress : 0.18 * pauseProgress;
 
         // 1. Main White Wave (Primary presence)
         const mainPulse = Math.sin(phase * 1.2 + t * Math.PI * 3) * (0.3 + energyLevel * 0.7);
@@ -169,7 +175,7 @@ export function AmbientToggle() {
       waveBurgundy?.setAttribute("d", flat);
       waveGold?.setAttribute("d", flat);
     };
-  }, [status]);
+  }, [status, hovered]);
 
   const toggle = async () => {
     if (!window.matchMedia("(min-width: 768px)").matches) return;
@@ -220,23 +226,37 @@ export function AmbientToggle() {
   const isPlaying = status === "playing" || status === "pausing";
   const ariaText = status === "error" ? "audio unavailable · retry" : status === "loading" ? "loading ambient" : isPlaying ? "ambient" : "click for ambient";
 
-  return <button type="button" className={styles.toggle} data-playing={isPlaying} aria-label={ariaText} aria-pressed={status === "playing"} aria-busy={status === "loading"} onClick={() => void toggle()}>
-    <span className={styles.lineWrap}>
-      <svg className={styles.waveSvg} viewBox="0 0 112 28" width="112" height="28" aria-hidden="true">
-        {/* Subtle background threads (Burgundy & Gold) counter-flowing */}
-        <path ref={pathBurgundy} className={styles.waveBurgundy} d="M0 14 H112" fill="none" stroke="#901a35" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-        <path ref={pathGold} className={styles.waveGold} d="M0 14 H112" fill="none" stroke="#dfa13d" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Primary White Waveform */}
-        <path ref={pathMain} className={styles.waveMain} d="M0 14 H112" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-    <span className={styles.labelContainer} aria-live="polite">
-      <span className={`${styles.labelText} ${isPlaying ? styles.textHidden : styles.textVisible}`} aria-hidden={isPlaying}>
-        {status === "error" ? "audio unavailable · retry" : status === "loading" ? "loading ambient" : "click for ambient"}
+  return (
+    <button
+      type="button"
+      className={styles.toggle}
+      data-playing={isPlaying}
+      aria-label={ariaText}
+      aria-pressed={status === "playing"}
+      aria-busy={status === "loading"}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+      onClick={() => void toggle()}
+    >
+      <span className={styles.lineWrap}>
+        <svg className={styles.waveSvg} viewBox="0 0 112 28" width="112" height="28" aria-hidden="true">
+          {/* Subtle background threads (Burgundy & Gold) counter-flowing */}
+          <path ref={pathBurgundy} className={styles.waveBurgundy} d="M0 14 H112" fill="none" stroke="#901a35" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+          <path ref={pathGold} className={styles.waveGold} d="M0 14 H112" fill="none" stroke="#dfa13d" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+          {/* Primary White Waveform */}
+          <path ref={pathMain} className={styles.waveMain} d="M0 14 H112" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </span>
-      <span className={`${styles.labelText} ${styles.textActiveLabel} ${isPlaying ? styles.textActivePlaying : styles.textHidden}`} aria-hidden={!isPlaying}>
-        ambient
+      <span className={styles.labelContainer} aria-live="polite">
+        <span className={`${styles.labelText} ${isPlaying ? styles.textHidden : styles.textVisible}`} aria-hidden={isPlaying}>
+          {status === "error" ? "audio unavailable · retry" : status === "loading" ? "loading ambient" : "click for ambient"}
+        </span>
+        <span className={`${styles.labelText} ${styles.textActiveLabel} ${isPlaying ? styles.textActivePlaying : styles.textHidden}`} aria-hidden={!isPlaying}>
+          ambient
+        </span>
       </span>
-    </span>
-  </button>;
+    </button>
+  );
 }

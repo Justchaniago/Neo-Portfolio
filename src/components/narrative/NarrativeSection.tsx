@@ -48,7 +48,7 @@ export function NarrativeSection() {
     let top = 0, travel = 1, width = 1, height = 1, viewTop = 0, viewLeft = 0;
     let visible = false, disposed = false;
     let mx = -9999, my = -9999, mouseVX = 0, mouseVY = 0;
-    let reading = false, readingDone = false;
+    let reading = false, readingDone = false, bypassReading = false;
     let taglineProgress = 0;
     let direction = 1, smoothDirection = 1;
     let inputDistance = 0, inputVelocity = 0, touchY: number | null = null;
@@ -90,24 +90,26 @@ export function NarrativeSection() {
       smoothDirection += (direction - smoothDirection) * (1 - Math.exp(-dt / 0.12));
       const p = current;
       // The burst follows scroll velocity; the caption trails on its own, calmer track.
-      taglineProgress += (p - taglineProgress) * (1 - Math.exp(-dt / 0.48));
-      const entrance = ease(phase(p, 0, 0.065));
-      const rise = (1 - entrance) * height * 0.34;
+      taglineProgress += (p - taglineProgress) * (1 - Math.exp(-dt / 0.42));
+      visual.style.setProperty("--stage-entry", String(ease(phase(p, 0, 0.04))));
+      const entrance = ease(phase(p, 0, 0.075));
+      const rise = (1 - entrance) * height * 0.28;
       copy.style.opacity = String(entrance);
-      copy.style.transform = "translate3d(0," + rise + "px,0)";
+      copy.style.transform = "translate3d(0," + rise + "px,0) scale(" + (0.96 + entrance * 0.04) + ")";
       // Hold the fully revealed copy briefly before sending each word off-canvas.
-      const scatter = phase(p, 0.18, 0.36);
-      const factor = Math.pow(scatter, 1.35) * 3.5;
+      const scatter = phase(p, 0.16, 0.38);
+      const factor = Math.pow(scatter, 1.3) * 3.4;
       const scale = Math.min(1, width / 1000, height / 650);
       const recall = Math.min(1, Math.pow(scatter, 1.2) * 1.6);
       const exitBlend = ease(scatter);
+      const wordFade = 1 - ease(phase(scatter, 0.72, 0.98));
       for (const word of words) {
         const dx = word.cx + word.tx - mx, dy = word.cy + rise + word.ty - my;
         const distance = Math.hypot(dx, dy);
-        if (finePointer.matches && scatter > 0.04 && distance > 0.1 && distance < 160) {
-          const proximity = 1 - distance / 160;
-          word.vx += (dx / distance * proximity ** 2 * 9 + mouseVX * proximity * 0.45) * dt * 60;
-          word.vy += (dy / distance * proximity ** 2 * 9 + mouseVY * proximity * 0.45) * dt * 60;
+        if (finePointer.matches && scatter > 0.03 && distance > 0.1 && distance < 175) {
+          const proximity = 1 - distance / 175;
+          word.vx += (dx / distance * proximity ** 2 * 10 + mouseVX * proximity * 0.48) * dt * 60;
+          word.vy += (dy / distance * proximity ** 2 * 10 + mouseVY * proximity * 0.48) * dt * 60;
         }
         word.vx *= Math.pow(0.92, dt * 60); word.vy *= Math.pow(0.92, dt * 60);
         word.x = Math.max(-500, Math.min(500, word.x + word.vx * dt * 60));
@@ -115,22 +117,26 @@ export function NarrativeSection() {
         if (scatter <= 0.001) word.x = word.y = word.vx = word.vy = 0;
         word.tx = word.dx * factor * scale * (1 - exitBlend) + word.exitX * exitBlend + word.x * recall * (1 - scatter);
         word.ty = word.dy * factor * scale * (1 - exitBlend) + word.exitY * exitBlend + word.y * recall * (1 - scatter);
+        word.el.style.opacity = String(wordFade);
         word.el.style.transform = "translate3d(" + word.tx + "px," + word.ty + "px,0) rotate(" + (word.rot * factor * (1 - exitBlend) + word.x * recall * (1 - scatter) * 0.04) + "deg)";
       }
       mouseVX *= Math.pow(0.85, dt * 60); mouseVY *= Math.pow(0.85, dt * 60);
-      const reveal = ease(phase(p, 0.36, 0.53));
-      const burstExit = ease(phase(taglineProgress, 0.78, 0.87));
-      const intensity = reveal * (1 - ease(phase(taglineProgress, 0.87, 0.88)));
+      const reveal = ease(phase(p, 0.32, 0.50));
+      const burstExit = ease(phase(taglineProgress, 0.76, 0.88));
+      const intensity = reveal * (1 - ease(phase(taglineProgress, 0.86, 0.90)));
       burst.draw(dt, intensity, speed, smoothDirection, reveal, burstExit);
       captions.forEach(caption => {
-        const enter = ease(phase(taglineProgress, 0.54, 0.62));
-        const leave = ease(phase(taglineProgress, 0.7, 0.78));
-        caption.style.opacity = String(enter * (1 - leave));
-        caption.style.transform = "translate3d(0," + ((1 - enter) * 18 - leave * 12) + "px,0)";
+        const enter = ease(phase(taglineProgress, 0.44, 0.54));
+        const leave = ease(phase(taglineProgress, 0.74, 0.84));
+        const visibilityAlpha = enter * (1 - leave);
+        caption.style.opacity = String(visibilityAlpha);
+        caption.style.transform = "translate3d(0," + ((1 - enter) * 22 - leave * 16) + "px,0) scale(" + (0.96 + enter * 0.04 + leave * 0.03) + ")";
       });
-      visual.style.setProperty("--window-progress", String(ease(phase(p, 0.91, 0.99))));
+      const portalProgress = ease(phase(p, 0.84, 0.985));
+      visual.style.setProperty("--window-progress", String(portalProgress));
       // Reveal the overlapping globe as the portal finishes covering the screen.
-      visual.style.opacity = String(1 - ease(phase(p, 0.98, 1)));
+      visual.style.opacity = String(1 - ease(phase(p, 0.97, 0.998)));
+      visual.style.pointerEvents = p >= 0.97 ? "none" : "auto";
       const leavingReading = (direction < 0 && target <= READING_START) || (direction > 0 && target >= READING_END);
       const captionCleared = direction > 0 ? taglineProgress >= 0.89 : taglineProgress <= READING_START + 0.01;
       if (reading && Math.abs(current - target) < 0.00001 && leavingReading && captionCleared) {
@@ -144,9 +150,10 @@ export function NarrativeSection() {
       if (reading) { wake(); return; }
       const oldTarget = target;
       target = clamp((scroller.scrollTop - top) / travel);
-      if (!reading && target < 0.3) readingDone = false;
-      const enteringForward = !readingDone && oldTarget < READING_START && target >= READING_START;
-      const enteringReverse = oldTarget >= READING_END && target < READING_END;
+      if (scroller.scrollTop <= 16) bypassReading = false;
+      if (!reading && target < 0.3 && !bypassReading) readingDone = false;
+      const enteringForward = !readingDone && !bypassReading && oldTarget < READING_START && target >= READING_START;
+      const enteringReverse = !bypassReading && oldTarget >= READING_END && target < READING_END;
       if (!reduced.matches && externalLocks.size === 0 && (enteringForward || enteringReverse)) {
         reading = true; inputDistance = 0;
         direction = enteringReverse ? -1 : 1;
@@ -206,6 +213,7 @@ export function NarrativeSection() {
       wake();
     };
     const wheel = (event: WheelEvent) => {
+      if (bypassReading && event.deltaY > 0 && scroller.scrollTop > 16) bypassReading = false;
       if (!reading || externalLocks.size > 0 || event.ctrlKey) return;
       event.preventDefault();
       drive(event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? height : 1));
@@ -215,6 +223,7 @@ export function NarrativeSection() {
       if (touchY === null || event.touches.length !== 1) return;
       const next = event.touches[0].clientY, delta = touchY - next;
       touchY = next;
+      if (bypassReading && delta > 0 && scroller.scrollTop > 16) bypassReading = false;
       if (!reading || externalLocks.size > 0) return;
       event.preventDefault(); drive(delta);
     };
@@ -225,7 +234,7 @@ export function NarrativeSection() {
       else if (["ArrowUp", "PageUp", "Home"].includes(event.key)) { event.preventDefault(); drive(-height * 0.35); }
       else if (event.key === "Escape") { event.preventDefault(); finishReading(current); }
     };
-    const navigation = () => { readingDone = true; finishReading(); };
+    const navigation = () => { readingDone = true; bypassReading = true; finishReading(); };
     const lockChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: string; locked?: boolean }>).detail;
       if (!detail?.source || detail.source === LOCK_SOURCE) return;

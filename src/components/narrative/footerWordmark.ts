@@ -22,10 +22,10 @@ export function createFooterWordmark(wordmark: HTMLElement, reduced: MediaQueryL
     if (!timeline) {
       timeline = gsap.timeline({ paused: true, onComplete: settle, onReverseComplete: settle });
       timeline.fromTo(glyphs, { y: 0, yPercent: 135 }, {
-        y: 0, yPercent: 0, duration: 0.92, stagger: 0.05, ease: "power3.out",
-      }, 0.15);
+        y: 0, yPercent: 0, duration: 0.88, stagger: 0.038, ease: "expo.out",
+      }, 0.04);
     }
-    const nextOpen = progress >= 1;
+    const nextOpen = progress >= 0.72;
     if (document.hidden) {
       timeline.pause();
       return;

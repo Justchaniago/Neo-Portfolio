@@ -18,7 +18,7 @@ export function createAsciiSweep() {
   let width = 1, height = 1, dpr = 1, cell = 4, row = 5, gridStartY = 0, columns = 0;
   let cells: { x: number; y: number; glyph: string; alpha: number }[] = [];
   const offset = (y: number) => 0.48 * (1 - y / height) + 0.025 * Math.sin(y / height * 12) + 0.012 * Math.sin(y / height * 31);
-  const sweep = (p: number) => -0.12 + 1.24 * clamp((p - 0.15) / 0.5);
+  const sweep = (p: number) => -0.14 + 1.28 * clamp((p - 0.24) / 0.46);
   return {
     resize(w: number, h: number, ratio: number, headerBottom: number) {
       width = w; height = h; dpr = ratio;
@@ -105,7 +105,7 @@ export function createAsciiSweep() {
       return moving.size > 0;
     },
     draw(ctx: CanvasRenderingContext2D, progress: number) {
-      if (progress <= 0.15) return;
+      if (progress <= 0.24) return;
       if (progress >= 1) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, width, height); return; }
       let surface = field;
       if (moving.size) {
@@ -126,8 +126,16 @@ export function createAsciiSweep() {
         for (const [index, movement] of moving) {
           const item = cells[index];
           if (!item) continue;
-          rippledCtx.fillStyle = `rgba(18,22,26,${item.alpha})`;
-          rippledCtx.fillText(item.glyph, item.x + movement.dx, item.y + movement.dy);
+          const mag = Math.hypot(movement.dx, movement.dy);
+          const boost = clamp(mag / 5.5);
+          const activeAlpha = Math.min(1, item.alpha + boost * 0.35);
+          const activeGlyph = boost > 0.35
+            ? palette[Math.min(palette.length - 1, Math.floor(boost * (palette.length - 1)))]
+            : item.glyph;
+          rippledCtx.fillStyle = boost > 0.55
+            ? `rgba(142,20,50,${activeAlpha})`
+            : `rgba(18,22,26,${activeAlpha})`;
+          rippledCtx.fillText(activeGlyph, item.x + movement.dx, item.y + movement.dy);
         }
         surface = rippled;
       }

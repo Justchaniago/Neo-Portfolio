@@ -31,10 +31,30 @@ export function CurvedMobileTagline() {
 
     let currentOffset = 0;
     const baseSpeed = 58; // px/sec cruising speed magnitude
+    const entranceBurstSpeed = 360; // px/sec initial orbital spin-in impulse
     let direction = 1; // 1 = forward (default), -1 = backward
-    let currentVelocity = baseSpeed * direction;
+    let currentVelocity =
+      document.documentElement.dataset.splashComplete === "true" && !reducedMotion.matches
+        ? entranceBurstSpeed * direction
+        : baseSpeed * direction;
     let lastTime = performance.now();
     let frameId = 0;
+    let burstTimer: number | undefined;
+
+    const triggerSpinIn = () => {
+      if (document.documentElement.dataset.splashComplete === "true" && !reducedMotion.matches) {
+        window.clearTimeout(burstTimer);
+        burstTimer = window.setTimeout(() => {
+          currentVelocity = entranceBurstSpeed * direction;
+          lastTime = performance.now();
+        }, 260);
+      }
+    };
+    const splashObserver = new MutationObserver(triggerSpinIn);
+    splashObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-splash-complete"],
+    });
 
     const scroller = document.querySelector("main") || window;
     let lastScrollY = scroller instanceof HTMLElement ? scroller.scrollTop : window.scrollY;
@@ -68,7 +88,7 @@ export function CurvedMobileTagline() {
         const targetVelocity = direction * baseSpeed;
 
         // Smooth exponential damping toward target cruising velocity
-        currentVelocity += (targetVelocity - currentVelocity) * (1 - Math.exp(-4.5 * dt));
+        currentVelocity += (targetVelocity - currentVelocity) * (1 - Math.exp(-2.8 * dt));
         currentOffset += currentVelocity * dt;
 
         // 100% mathematically seamless continuous loop wrap
@@ -90,6 +110,8 @@ export function CurvedMobileTagline() {
 
     return () => {
       cancelAnimationFrame(frameId);
+      window.clearTimeout(burstTimer);
+      splashObserver.disconnect();
       scroller.removeEventListener("scroll", onScroll);
     };
   }, []);

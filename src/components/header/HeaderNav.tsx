@@ -27,11 +27,11 @@ export function HeaderNav() {
     let hasMeasured = false;
     let collapsed = false;
 
-    const getSection = () => (
-      document.documentElement.dataset.projectsActive === "true"
-        ? "project"
-        : document.documentElement.dataset.staticSection || "hero"
-    );
+    const getSection = () => {
+      const staticSec = document.documentElement.dataset.staticSection;
+      if (staticSec === "about" || staticSec === "contact") return staticSec;
+      return document.documentElement.dataset.projectsActive === "true" ? "project" : "hero";
+    };
 
     const update = () => {
       const currentScrollTop = scroller.scrollTop;
@@ -59,12 +59,6 @@ export function HeaderNav() {
       previousScrollTop = currentScrollTop;
       hasMeasured = true;
       setActiveSection(section);
-
-      if (nav.current) {
-        nav.current.style.transform = !layerActive && !mobile.matches && next
-          ? `translate3d(0, -${currentScrollTop}px, 0)`
-          : "";
-      }
 
       if (next === collapsed) return;
       collapsed = next;
@@ -102,14 +96,28 @@ export function HeaderNav() {
     const link = links.current[index];
     if (!link || event.pointerType === "touch") return;
     const bounds = link.getBoundingClientRect();
-    const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 16;
-    const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 8;
-    gsap.to(link, { x, y, duration: 0.36, ease: "power3.out", overwrite: true });
+    const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 12;
+    const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 6;
+    gsap.to(link, {
+      "--mag-x": `${x.toFixed(2)}px`,
+      "--mag-y": `${y.toFixed(2)}px`,
+      duration: 0.32,
+      ease: "power3.out",
+      overwrite: true,
+    });
   };
 
   const reset = (index: number) => {
     const link = links.current[index];
-    if (link) gsap.to(link, { x: 0, y: 0, duration: 0.5, ease: "elastic.out(1, 0.55)", overwrite: true });
+    if (link) {
+      gsap.to(link, {
+        "--mag-x": "0px",
+        "--mag-y": "0px",
+        duration: 0.5,
+        ease: "elastic.out(1, 0.5)",
+        overwrite: true,
+      });
+    }
   };
 
   return (
@@ -122,15 +130,21 @@ export function HeaderNav() {
       aria-label="Main navigation"
     >
       {ITEMS.map((item, index) => (
-        <span key={item.label} className={motion.navSlot} data-section={item.label}>
+        <span
+          key={item.label}
+          className={motion.navSlot}
+          data-section={item.label}
+          style={{ "--item-index": index } as CSSProperties}
+        >
           <a
             ref={(element) => { links.current[index] = element; }}
-            className={styles.navLink}
+            className={`${styles.navLink} ${motion.navLink}`}
             data-section={item.label}
             href={item.href}
             data-project-link={item.label === "project" ? "true" : undefined}
             onClick={(event) => {
               event.preventDefault();
+              reset(index);
               window.dispatchEvent(new CustomEvent("portfolio:request-section", {
                 detail: { section: item.label },
               }));
@@ -144,7 +158,9 @@ export function HeaderNav() {
                 style={{ "--char-index": characterIndex } as CSSProperties}
                 key={`${character}-${characterIndex}`}
               >
-                {character}
+                <span className={styles.navCharRoll} data-char={character}>
+                  {character}
+                </span>
               </span>
             ))}
           </a>

@@ -72,7 +72,7 @@ export function SplashScreen() {
             <ReelLetters text="just" />
           </span>
         </span>
-        <span className={styles.core} aria-hidden="true">
+        <span className={styles.core} data-core aria-hidden="true">
           <ReelLetters text="chaniago" offset={4} />
         </span>
         <span className={styles.suffix} data-suffix aria-hidden="true">

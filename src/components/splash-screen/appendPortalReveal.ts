@@ -25,8 +25,11 @@ export function appendPortalReveal(timeline: gsap.core.Timeline, root: HTMLEleme
   };
   const render = () => {
     const currentRadius = radius + (targetRadius - radius) * zoom.progress;
-    gsap.set(portal, {
-      clipPath: `circle(${currentRadius}px at ${centerX}px ${centerY}px)`,
+    const innerEdge = Math.max(0, currentRadius - 1.5);
+    const mask = `radial-gradient(circle at ${centerX}px ${centerY}px, transparent 0px, transparent ${innerEdge}px, #000 ${currentRadius}px)`;
+    gsap.set(root, {
+      webkitMaskImage: mask,
+      maskImage: mask,
     });
   };
   const observer = new ResizeObserver(() => {
@@ -36,28 +39,31 @@ export function appendPortalReveal(timeline: gsap.core.Timeline, root: HTMLEleme
   });
   observer.observe(root);
 
-  timeline.addLabel("portal", "+=0.48");
+  timeline.addLabel("portal", "+=0.55");
   timeline.call(() => {
     active = true;
     measure();
-    render();
-    gsap.set(portal, { visibility: "visible", willChange: "clip-path" });
+    document.documentElement.dataset.splashComplete = "true";
+    const content = document.querySelector<HTMLElement>("[data-page-content]");
+    if (content) content.inert = false;
+    gsap.set(root, { pointerEvents: "none" });
+    gsap.set(portal, { visibility: "hidden" });
     gsap.set(dot, { visibility: "hidden" });
+    render();
   }, [], "portal");
   timeline.to(zoom, {
     progress: 1,
-    duration: 1.35,
-    ease: "power2.inOut",
+    duration: 1.45,
+    ease: "power4.inOut",
     onUpdate: render,
     onComplete: () => {
       active = false;
       observer.disconnect();
     },
-  });
-  timeline.set(root, { backgroundColor: "#fff" });
-  timeline.set([portal, wordmark], { visibility: "hidden" });
-  timeline.set(portal, { clearProps: "willChange" });
-  // Reveal the already mounted page through white, without an abrupt cut.
-  timeline.to(root, { opacity: 0, duration: 0.45, ease: "sine.inOut" });
-  return () => observer.disconnect();
+  }, "portal");
+  timeline.set(wordmark, { visibility: "hidden" }, "portal+=1.45");
+  return () => {
+    observer.disconnect();
+    gsap.set(root, { clearProps: "webkitMaskImage,maskImage,pointerEvents" });
+  };
 }

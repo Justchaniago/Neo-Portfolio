@@ -6,55 +6,140 @@
   pointer-events: auto; touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.icon { display: flex; flex-direction: column; gap: 7px; width: 24px; }
-.icon > span { width: 24px; height: 1.5px; background: currentColor; }
+.close {
+  border-radius: 50%;
+  transition: transform 340ms cubic-bezier(0.16, 1, 0.3, 1), background-color 240ms ease;
+}
+.close:hover, .close:active {
+  background: rgb(0 0 0 / 5%);
+  transform: rotate(90deg);
+}
+.icon { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; width: 24px; }
+.icon > span { width: 24px; height: 1.5px; background: currentColor; transition: width 280ms cubic-bezier(0.16, 1, 0.3, 1), transform 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+.icon > span:nth-child(2) { width: 17px; }
+.trigger:hover .icon > span:nth-child(2),
+.trigger:focus-visible .icon > span:nth-child(2) { width: 24px; }
+.trigger .icon > span {
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: right center;
+}
+:global(html[data-splash-complete="true"]) .trigger .icon > span:nth-child(1) {
+  animation: triggerLineIn 520ms cubic-bezier(0.16, 1, 0.3, 1) 320ms both;
+}
+:global(html[data-splash-complete="true"]) .trigger .icon > span:nth-child(2) {
+  animation: triggerLineIn 520ms cubic-bezier(0.16, 1, 0.3, 1) 400ms both;
+}
 .layer { position: fixed; z-index: 90; inset: 0; isolation: isolate; mix-blend-mode: normal; color: #151515; }
 .scrim {
   position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
-  background: rgb(0 0 0 / 28%); touch-action: none;
-  animation: veilIn 440ms ease both;
+  background: rgb(10 10 10 / 40%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  touch-action: none;
+  animation: veilIn 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .panel {
   position: absolute; inset: 0 0 0 auto;
   display: flex; flex-direction: column; box-sizing: border-box;
-  width: min(82vw, 390px);
-  padding: max(12px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) 24px;
+  width: min(84vw, 390px);
+  padding: max(14px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) 26px;
   overflow-y: auto; overscroll-behavior: contain;
   background: #fafaf8; color: #151515;
-  box-shadow: -12px 0 36px rgb(0 0 0 / 12%);
-  font-family: Arial, Helvetica, sans-serif;
-  animation: panelIn 440ms cubic-bezier(.22, 1, .36, 1) both;
+  border-left: 1px solid rgb(0 0 0 / 8%);
+  box-shadow: -20px 0 56px rgb(0 0 0 / 16%);
+  font-family: var(--font-sans), sans-serif;
+  animation: panelIn 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.panelTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.eyebrow { margin: 0; font-size: .75rem; letter-spacing: .06em; color: #666; }
-.links { display: flex; flex-direction: column; margin-block: clamp(32px, 14dvh, 128px) 40px; }
+.panelTop {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgb(0 0 0 / 8%);
+}
+.eyebrow {
+  margin: 0; font-size: .72rem; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .12em; color: #767672;
+}
+.links { display: flex; flex-direction: column; margin-block: clamp(28px, 11dvh, 108px) 36px; }
 .link {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  min-height: 84px; padding-block: 16px; border-bottom: 1px solid #dededb;
+  min-height: 86px; padding-block: 16px; border-bottom: 1px solid #e4e4e0;
   color: inherit; text-decoration: none;
-  font-size: clamp(2rem, 9vw, 3.25rem); line-height: 1.1;
+  font-size: clamp(2.1rem, 9.2vw, 3.35rem); line-height: 1.06;
   font-weight: 600; letter-spacing: -.055em; touch-action: manipulation;
+  animation: linkItemIn 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(90ms + var(--item-index, 0) * 70ms);
+  transition: padding-left 320ms cubic-bezier(0.16, 1, 0.3, 1), color 220ms ease;
 }
-.link span { min-width: 0; overflow-wrap: anywhere; }
-.arrow { flex-shrink: 0; width: 24px; height: 24px; color: #777; stroke-width: 1.5; }
-.caption { margin: auto 0 0; padding-top: 24px; font-size: .875rem; font-weight: 600; letter-spacing: -.025em; }
+.linkContent {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.linkIndex {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #8c8c86;
+  transform: translateY(-0.9em);
+}
+.link[data-active="true"] .linkIndex {
+  color: #a01838;
+  font-weight: 600;
+}
+.linkLabel { min-width: 0; overflow-wrap: anywhere; }
+.arrowWrap {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 10%);
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), background-color 240ms ease, border-color 240ms ease;
+}
+.arrow { width: 19px; height: 19px; color: #555; stroke-width: 1.6; transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms ease; }
+.link:hover, .link:active { padding-left: 6px; }
+.link:hover .arrowWrap, .link:active .arrowWrap, .link[data-active="true"] .arrowWrap {
+  background: #151515;
+  border-color: #151515;
+}
+.link:hover .arrow, .link:active .arrow, .link[data-active="true"] .arrow {
+  color: #fafaf8;
+  transform: translate3d(2px, -2px, 0);
+}
+.panelFooter {
+  margin: auto 0 0;
+  padding-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: linkItemIn 560ms cubic-bezier(0.16, 1, 0.3, 1) 310ms both;
+}
+.caption { margin: 0; font-size: .875rem; font-weight: 600; letter-spacing: -.03em; }
+.meta { margin: 0; font-size: .75rem; color: #767672; letter-spacing: -.01em; }
 .trigger:focus-visible, .close:focus-visible, .link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
-.link:active { color: #666; }
 .layer[data-closing="true"] { pointer-events: none; }
-.layer[data-closing="true"] .panel { animation: panelOut 360ms cubic-bezier(.4, 0, .2, 1) both; }
-.layer[data-closing="true"] .scrim { animation: veilOut 360ms ease both; }
-@keyframes panelIn { from { transform: translateX(105%); } to { transform: translateX(0); } }
-@keyframes panelOut { from { transform: var(--exit-transform, translateX(0)); } to { transform: translateX(105%); } }
+.layer[data-closing="true"] .panel { animation: panelOut 380ms cubic-bezier(.4, 0, .2, 1) both; }
+.layer[data-closing="true"] .scrim { animation: veilOut 380ms ease both; }
+@keyframes triggerLineIn { from { opacity: 0; transform: scaleX(0); } to { opacity: 1; transform: scaleX(1); } }
+@keyframes panelIn { from { transform: translateX(103%); } to { transform: translateX(0); } }
+@keyframes panelOut { from { transform: var(--exit-transform, translateX(0)); } to { transform: translateX(103%); } }
 @keyframes veilIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes veilOut { from { opacity: var(--exit-opacity, 1); } to { opacity: 0; } }
+@keyframes linkItemIn { from { opacity: 0; transform: translate3d(0, 18px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
 @media (max-width: 767px) {
   .root { display: block; }
   :global(html[data-footer-active="true"]) .trigger { opacity: 0; visibility: hidden; pointer-events: none; }
 }
 @media (max-height: 500px) {
-  .links { margin-block: 20px; }
-  .link { min-height: 60px; padding-block: 12px; }
+  .links { margin-block: 16px; }
+  .link { min-height: 58px; padding-block: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .panel, .scrim, .layer[data-closing="true"] .panel, .layer[data-closing="true"] .scrim { animation-duration: 0.01ms; }
+  .trigger .icon > span, :global(html[data-splash-complete="true"]) .trigger .icon > span:nth-child(1), :global(html[data-splash-complete="true"]) .trigger .icon > span:nth-child(2) { opacity: 1; transform: none; animation: none; }
+  .panel, .scrim, .link, .panelFooter, .layer[data-closing="true"] .panel, .layer[data-closing="true"] .scrim { animation-duration: 0.01ms; animation-delay: 0ms; }
+  .close, .link, .arrowWrap, .arrow, .icon > span { transition: none; }
 }

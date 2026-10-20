@@ -273,24 +273,81 @@ export function AntigravityHalo({
     // Animation Loop
     const startTime = performance.now();
     let animFrameId = 0;
+    let shockwaveStart: number | null =
+      pointerScope === "window" && document.documentElement.dataset.splashComplete === "true" && !prefersReducedMotion
+        ? performance.now()
+        : null;
+
+    const splashObserver = new MutationObserver(() => {
+      if (
+        pointerScope === "window" &&
+        document.documentElement.dataset.splashComplete === "true" &&
+        !prefersReducedMotion &&
+        shockwaveStart === null
+      ) {
+        shockwaveStart = performance.now();
+        ringPos.set(0.0, 0.04);
+      }
+    });
+    if (pointerScope === "window") {
+      splashObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-splash-complete"],
+      });
+    }
 
     const animate = () => {
       animFrameId = 0;
       if (!isVisible || document.hidden) return;
 
-      const elapsedTime = prefersReducedMotion ? 1.0 : (performance.now() - startTime) * 0.001;
+      const now = performance.now();
+      const elapsedTime = prefersReducedMotion ? 1.0 : (now - startTime) * 0.001;
       uniforms.uTime.value = elapsedTime;
 
-      // Dynamic breathing halo radius
+      // Dynamic breathing halo radius + Hero entrance 3D shockwave
       const currentRadius = getBaseRingRadius();
+      const baseWidth = getBaseRingWidth();
+      const baseWidth2 = getBaseRingWidth2();
+      const baseDisp = getBaseRingDisplacement();
       const radiusPulsing = isPortrait() ? 0.010 : 0.025;
       const radiusPulsing2 = isPortrait() ? 0.006 : 0.015;
 
+      let shockRadiusOffset = 0;
+      let shockWidthBoost = 1;
+      let shockDispBoost = 1;
+      let meshScale = 5.0;
+
+      if (!prefersReducedMotion && shockwaveStart !== null) {
+        const shockElapsed = Math.max(0, (now - shockwaveStart - 120) * 0.001);
+        const shockDuration = 2.25;
+        if (shockElapsed < shockDuration) {
+          const p = shockElapsed / shockDuration;
+          // Fast radial explosion from the center dot followed by harmonic antigravity contraction
+          const burst = Math.sin(p * Math.PI * 1.45) * Math.exp(-p * 2.35);
+          const initialCompression = Math.exp(-p * 9.0);
+          shockRadiusOffset =
+            -currentRadius * 0.92 * initialCompression +
+            currentRadius * (isPortrait() ? 1.45 : 1.35) * burst;
+          shockWidthBoost = 1 + Math.max(0, burst) * 1.15;
+          shockDispBoost = 1 + Math.max(0, burst) * 2.6;
+          const scaleEase = 1 - Math.pow(1 - Math.min(1, p * 1.4), 3);
+          meshScale = 3.6 + 1.4 * scaleEase;
+        }
+      }
+
+      pointsMesh.scale.set(meshScale, meshScale, meshScale);
+
       if (!prefersReducedMotion) {
-        uniforms.uRingRadius.value =
+        uniforms.uRingRadius.value = Math.max(
+          0.008,
           currentRadius +
-          Math.sin(elapsedTime * 1.2) * radiusPulsing +
-          Math.cos(elapsedTime * 2.8) * radiusPulsing2;
+            shockRadiusOffset +
+            Math.sin(elapsedTime * 1.2) * radiusPulsing +
+            Math.cos(elapsedTime * 2.8) * radiusPulsing2,
+        );
+        uniforms.uRingWidth.value = baseWidth * shockWidthBoost;
+        uniforms.uRingWidth2.value = baseWidth2 * shockWidthBoost;
+        uniforms.uRingDisplacement.value = baseDisp * shockDispBoost;
       }
 
       // Autonomous Mobile & Idle Wander Motion
@@ -352,7 +409,11 @@ export function AntigravityHalo({
       prefersReducedMotion = reducedMotion.matches;
       if (prefersReducedMotion) {
         isMouseActive = false;
+        pointsMesh.scale.set(5.0, 5.0, 5.0);
         uniforms.uRingRadius.value = getBaseRingRadius();
+        uniforms.uRingWidth.value = getBaseRingWidth();
+        uniforms.uRingWidth2.value = getBaseRingWidth2();
+        uniforms.uRingDisplacement.value = getBaseRingDisplacement();
       }
       if (isVisible && !document.hidden) animFrameId = requestAnimationFrame(animate);
     };
@@ -362,6 +423,7 @@ export function AntigravityHalo({
     // Cleanup
     return () => {
       cancelAnimationFrame(animFrameId);
+      splashObserver.disconnect();
       pointerTarget.removeEventListener("pointermove", handlePointerMove as EventListener);
       pointerTarget.removeEventListener("touchstart", handleTouchStart as EventListener);
       pointerTarget.removeEventListener("touchmove", handleTouchMove as EventListener);
