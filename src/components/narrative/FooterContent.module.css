@@ -18,14 +18,81 @@
 }
 
 .columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 24px; }
-.invitation {
+.invitationBlock {
   grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+.invitation {
   margin: 0;
   font-family: "Space Grotesk", "Google Sans Flex", sans-serif;
   font-size: clamp(1.8rem, 6.8vw, 3rem);
   font-weight: 500;
   letter-spacing: -0.055em;
   line-height: 1.08;
+}
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.magneticCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.9);
+  background: #ffffff;
+  color: #060608;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background-color 220ms ease, color 220ms ease;
+}
+.magneticCta:hover,
+.magneticCta:focus-visible {
+  background: #f4ead8;
+}
+.ctaIcon {
+  width: 15px;
+  height: 15px;
+  transition: transform 220ms ease;
+}
+.magneticCta:hover .ctaIcon,
+.magneticCta:focus-visible .ctaIcon {
+  transform: translate(2px, -2px);
+}
+.copyEmailBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.05);
+  color: #d8d8d8;
+  font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
+}
+.copyEmailBtn:hover,
+.copyEmailBtn:focus-visible {
+  background: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.36);
+  color: #ffffff;
+}
+.copyIcon {
+  width: 13px;
+  height: 13px;
+  color: #a3a3a3;
 }
 .group { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
 .label { margin: 0 0 12px; color: #a3a3a3; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; }
@@ -60,7 +127,8 @@
 @media (min-width: 768px) {
   .content { top: clamp(120px, 24dvh, 220px); left: 5%; right: 5%; bottom: calc(var(--footer-wordmark-height, 25dvh) + max(20px, env(safe-area-inset-bottom)) + 40px); }
   .columns { grid-template-columns: 1.8fr 0.8fr 0.8fr; gap: 6%; }
-  .invitation { grid-column: auto; font-size: clamp(2rem, 3.5vw, 4rem); }
+  .invitationBlock { grid-column: auto; gap: 24px; }
+  .invitation { font-size: clamp(2rem, 3.5vw, 4rem); }
   .label { margin-bottom: 16px; }
   .copyright { font-size: 0.75rem; }
 }
@@ -68,11 +136,12 @@
 @media (max-height: 500px) and (min-width: 600px) {
   .content { top: 80px; gap: 16px; pointer-events: auto; }
   .columns { grid-template-columns: 1.6fr 1fr 1fr; gap: 24px; }
-  .invitation { grid-column: auto; font-size: 1.75rem; }
+  .invitationBlock { grid-column: auto; gap: 12px; }
+  .invitation { font-size: 1.75rem; }
   .label { margin-bottom: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .content { opacity: 1; transform: none; }
-  .link > span:first-child, .arrow { transition: none; }
+  .link > span:first-child, .arrow, .magneticCta { transition: none; }
 }

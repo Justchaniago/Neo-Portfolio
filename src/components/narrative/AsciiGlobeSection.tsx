@@ -19,6 +19,27 @@ export function AsciiGlobeSection() {
   const labelRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLParagraphElement>(null);
   const [failed, setFailed] = useState(false);
+  const [localTime, setLocalTime] = useState("UTC+7 · WIB");
+
+  useEffect(() => {
+    const updateClock = () => {
+      try {
+        const formatted = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Jakarta",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }).format(new Date());
+        setLocalTime(`${formatted} WIB · UTC+7`);
+      } catch {
+        setLocalTime("UTC+7 · WIB");
+      }
+    };
+    updateClock();
+    const timer = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -37,6 +58,7 @@ export function AsciiGlobeSection() {
     let visible = false, disposed = false;
     let touchPointer: number | null = null;
     let lastPointer: { x: number; y: number; time: number } | null = null;
+    let tiltX = 0, tiltY = 0, targetTiltX = 0, targetTiltY = 0;
     let globeTravel = 1, cached = false;
     const sweep = createAsciiSweep();
     const settledMap = document.createElement("canvas");
@@ -150,7 +172,7 @@ export function AsciiGlobeSection() {
       const py = height * 0.52 - (SURABAYA.lat + 2.5) * scale;
       const pinProgress = phase(p, 0.82, 0.96) * (1 - sweep.covered(px, py, extra));
       label.style.opacity = String(pinProgress);
-      label.style.transform = `translate3d(-50%, ${(1 - pinProgress) * 10}px, 0)`;
+      label.style.transform = `translate3d(calc(-50% + ${(tiltX * 8).toFixed(1)}px), ${((1 - pinProgress) * 10 + tiltY * 6).toFixed(1)}px, 0)`;
       caption.style.opacity = String(phase(p, 0.18, 0.32) * (1 - phase(extra, 0.22, 0.34)));
     };
 
@@ -161,19 +183,25 @@ export function AsciiGlobeSection() {
       last = time;
       current += (target - current) * (1 - Math.exp(-dt / 65));
       if (Math.abs(target - current) < 0.0001) current = target;
+      tiltX += (targetTiltX - tiltX) * (1 - Math.exp(-dt / 90));
+      tiltY += (targetTiltY - tiltY) * (1 - Math.exp(-dt / 90));
       const surfaceMoving = !reduced.matches && sweep.updateMotion(dt);
+      const tiltMoving = Math.abs(targetTiltX - tiltX) > 0.001 || Math.abs(targetTiltY - tiltY) > 0.001;
       draw();
-      if ((current !== target || surfaceMoving) && !reduced.matches) raf = requestAnimationFrame(tick);
+      if ((current !== target || surfaceMoving || tiltMoving) && !reduced.matches) raf = requestAnimationFrame(tick);
     };
     const wake = () => { if (!raf && !disposed && visible && !document.hidden) raf = requestAnimationFrame(tick); };
     const scroll = () => { target = clamp((scroller.scrollTop - top) / travel); wake(); };
     const moveSurface = (event: PointerEvent) => {
       if (reduced.matches || !visible) return;
-      const extra = clamp((current * travel - globeTravel) / Math.max(1, height * 2.4));
-      if (extra <= 0.24 || extra >= 0.99) { lastPointer = null; return; }
       const bounds = canvas.getBoundingClientRect();
       const x = event.clientX - bounds.left;
       const y = event.clientY - bounds.top;
+      targetTiltX = clamp(x / Math.max(1, width)) * 2 - 1;
+      targetTiltY = clamp(y / Math.max(1, height)) * 2 - 1;
+      wake();
+      const extra = clamp((current * travel - globeTravel) / Math.max(1, height * 2.4));
+      if (extra <= 0.24 || extra >= 0.99) { lastPointer = null; return; }
       const now = performance.now();
       if (lastPointer && now - lastPointer.time < 160) {
         sweep.drag(x, y, x - lastPointer.x, y - lastPointer.y);
@@ -196,7 +224,7 @@ export function AsciiGlobeSection() {
         lastPointer = null;
       }
     };
-    const pointerLeave = () => { lastPointer = null; touchPointer = null; };
+    const pointerLeave = () => { lastPointer = null; touchPointer = null; targetTiltX = 0; targetTiltY = 0; wake(); };
     const resize = () => {
       width = canvas.clientWidth;
       height = canvas.clientHeight;
@@ -267,8 +295,12 @@ export function AsciiGlobeSection() {
         <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
         <p ref={captionRef} className={styles.caption}>A world of possibilities. A place to call home.</p>
         <div ref={labelRef} className={styles.location}>
-          <strong>SURABAYA, ID</strong>
+          <div className={styles.locationHeader}>
+            <span className={styles.liveDot} aria-hidden="true" />
+            <strong>SURABAYA, ID</strong>
+          </div>
           <span>7.2575° S · 112.7521° E</span>
+          <span className={styles.localTime}>{localTime}</span>
         </div>
         {failed && <p className={styles.fallback}>Surabaya, Indonesia · 7.2575° S, 112.7521° E</p>}
         <p className={styles.accessible}>An ASCII globe rotates toward Indonesia and expands into a map of the archipelago. Surabaya, East Java is marked at 7.2575 degrees south, 112.7521 degrees east.</p>

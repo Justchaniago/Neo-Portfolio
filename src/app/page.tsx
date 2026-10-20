@@ -168,6 +168,13 @@ export default function Home() {
             <span className={styles.heroLine} style={{ "--line-index": 1 } as CSSProperties}>Software Engineer</span>
           </p>
         </div>
+
+        <div className={styles.scrollCue} aria-hidden="true">
+          <span className={styles.scrollCueTrack}>
+            <span className={styles.scrollCuePulse} />
+          </span>
+          <span className={styles.scrollCueLabel}>Scroll to explore</span>
+        </div>
       </div>
       </ProjectsExperience>
       </div>
