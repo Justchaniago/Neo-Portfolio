@@ -109,6 +109,7 @@ export function AmbientToggle() {
         for (let i = 0; i < 24; i++) energy += freqData[i];
         energyLevel = (energy / (24 * 255)) * pauseProgress;
       }
+      document.documentElement.dataset.ambientEnergy = isAudioActive ? energyLevel.toFixed(3) : "0";
       phase += (0.045 + energyLevel * 0.055) * Math.max(0.35, pauseProgress);
 
       const ptsMain: Array<[number, number]> = [];
@@ -170,12 +171,49 @@ export function AmbientToggle() {
     return () => {
       cancelAnimationFrame(frame);
       reduced.removeEventListener("change", restart);
+      delete document.documentElement.dataset.ambientEnergy;
       const flat = "M0,14 C28,14 84,14 112,14";
       waveMain?.setAttribute("d", flat);
       waveBurgundy?.setAttribute("d", flat);
       waveGold?.setAttribute("d", flat);
     };
   }, [status, hovered]);
+
+  useEffect(() => {
+    const playChime = (freqStart: number, freqEnd: number, duration = 0.16) => {
+      const player = engine.current;
+      if (!player || status !== "playing" || player.context.state !== "running") return;
+      try {
+        const ctx = player.context;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const chimeGain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freqStart, now);
+        osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+        chimeGain.gain.setValueAtTime(0.0001, now);
+        chimeGain.gain.linearRampToValueAtTime(0.024, now + 0.018);
+        chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        osc.connect(chimeGain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      } catch {
+        // Ignore audio synthesis errors
+      }
+    };
+
+    const onOpenSection = () => playChime(320, 480, 0.18);
+    const onCloseSection = () => playChime(420, 260, 0.16);
+
+    window.addEventListener("portfolio:request-section", onOpenSection);
+    window.addEventListener("portfolio:toggle-projects", onOpenSection);
+    window.addEventListener("portfolio:go-home", onCloseSection);
+    return () => {
+      window.removeEventListener("portfolio:request-section", onOpenSection);
+      window.removeEventListener("portfolio:toggle-projects", onOpenSection);
+      window.removeEventListener("portfolio:go-home", onCloseSection);
+    };
+  }, [status]);
 
   const toggle = async () => {
     if (!window.matchMedia("(min-width: 768px)").matches) return;

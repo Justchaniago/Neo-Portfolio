@@ -338,16 +338,19 @@ export function AntigravityHalo({
       pointsMesh.scale.set(meshScale, meshScale, meshScale);
 
       if (!prefersReducedMotion) {
+        const ambientEnergy = Number(document.documentElement.dataset.ambientEnergy ?? "0");
+        const harmonicBoost = 1 + ambientEnergy * 0.42;
         uniforms.uRingRadius.value = Math.max(
           0.008,
           currentRadius +
             shockRadiusOffset +
-            Math.sin(elapsedTime * 1.2) * radiusPulsing +
-            Math.cos(elapsedTime * 2.8) * radiusPulsing2,
+            ambientEnergy * 0.024 +
+            Math.sin(elapsedTime * 1.2) * radiusPulsing * harmonicBoost +
+            Math.cos(elapsedTime * 2.8) * radiusPulsing2 * harmonicBoost,
         );
-        uniforms.uRingWidth.value = baseWidth * shockWidthBoost;
-        uniforms.uRingWidth2.value = baseWidth2 * shockWidthBoost;
-        uniforms.uRingDisplacement.value = baseDisp * shockDispBoost;
+        uniforms.uRingWidth.value = baseWidth * shockWidthBoost * (1 + ambientEnergy * 0.25);
+        uniforms.uRingWidth2.value = baseWidth2 * shockWidthBoost * (1 + ambientEnergy * 0.25);
+        uniforms.uRingDisplacement.value = baseDisp * shockDispBoost * (1 + ambientEnergy * 0.35);
       }
 
       // Autonomous Mobile & Idle Wander Motion
