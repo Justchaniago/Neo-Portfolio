@@ -44,10 +44,39 @@ export function StaticPagesExperience() {
     gsap.set(layer, { autoAlpha: next > 0 ? 1 : 0, yPercent: (1 - next) * 100 });
   }, [getLayer, syncGlobalProgress]);
 
-  const finishClose = useCallback((section: StaticSection) => {
+  const parkSection = useCallback((section: StaticSection) => {
     const layer = getLayer(section);
-    if (layer) gsap.set(layer, { clearProps: "scale,filter,zIndex" });
+    gsap.killTweensOf(ratios.current, section);
+    if (layer) {
+      gsap.killTweensOf(layer);
+      gsap.set(layer, { clearProps: "scale,filter,zIndex,y" });
+    }
     apply(section, 0);
+  }, [apply, getLayer]);
+
+  const recedeSection = useCallback((section: StaticSection) => {
+    const layer = getLayer(section);
+    if (readySection === section) setReadySection(null);
+    if (!layer || ratios.current[section] <= 0.001) {
+      parkSection(section);
+      return;
+    }
+    gsap.killTweensOf(ratios.current, section);
+    gsap.killTweensOf(layer, "scale,filter,y");
+    layer.style.zIndex = "52";
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    gsap.to(layer, {
+      scale: reduced ? 1 : 0.965,
+      y: reduced ? 0 : -14,
+      filter: reduced ? "none" : "brightness(0.55)",
+      duration: reduced ? 0 : 0.92,
+      ease: "expo.out",
+      overwrite: "auto",
+    });
+  }, [getLayer, parkSection, readySection]);
+
+  const finishClose = useCallback((section: StaticSection) => {
+    parkSection(section);
     if (activeSection.current === section) {
       activeSection.current = null;
     }
@@ -61,7 +90,7 @@ export function StaticPagesExperience() {
       document.documentElement.dataset.staticProgress = "0.0000";
     }
     window.dispatchEvent(new CustomEvent("portfolio:static-closed"));
-  }, [apply, getLayer]);
+  }, [parkSection]);
 
   const closeSection = useCallback((section: StaticSection, silent = false, handoff = false) => {
     const layer = getLayer(section);
@@ -70,40 +99,48 @@ export function StaticPagesExperience() {
       activeSection.current = null;
       document.documentElement.dataset.staticSection = "";
     }
-    if (handoff && layer) {
-      layer.style.zIndex = "52";
-      gsap.to(layer, {
-        scale: 0.96,
-        filter: "brightness(0.65)",
-        duration: 0.85,
-        ease: "expo.out",
-        overwrite: "auto",
-      });
+    if (handoff) {
+      recedeSection(section);
+      return;
+    }
+    // Ensure any recessed underneath sibling card is parked immediately before sliding down to Home
+    sections.forEach((s) => {
+      if (s !== section && ratios.current[s] > 0.001) {
+        parkSection(s);
+      }
+    });
+    if (Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001) {
+      window.dispatchEvent(new CustomEvent("portfolio:close-projects", {
+        detail: { mode: "slide-down", handoff: false },
+      }));
     }
     if (!layer || ratios.current[section] <= 0.001) {
-      if (layer) gsap.set(layer, { clearProps: "scale,filter,zIndex" });
-      apply(section, 0);
       finishClose(section);
       return;
     }
 
+    gsap.killTweensOf(layer, "scale,filter,y");
+    gsap.set(layer, { clearProps: "scale,filter,y" });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.to(ratios.current, {
       [section]: 0,
-      duration: reduced ? 0 : 0.96,
+      duration: reduced ? 0 : 0.92,
       ease: "expo.out",
       overwrite: "auto",
       onUpdate: () => apply(section, ratios.current[section]),
       onComplete: () => {
-        if (layer) gsap.set(layer, { clearProps: "scale,filter,zIndex" });
         finishClose(section);
       },
     });
-  }, [apply, finishClose, getLayer, readySection]);
+  }, [apply, finishClose, getLayer, parkSection, readySection, recedeSection]);
 
   const openSection = useCallback((section: StaticSection) => {
     const current = activeSection.current;
     if (current === section && ratios.current[section] > 0.5) {
+      // User clicked the already-active section link -> close it back to Home
+      sections.forEach((s) => {
+        if (s !== section && ratios.current[s] > 0.001) parkSection(s);
+      });
       closeSection(section);
       return;
     }
@@ -111,20 +148,33 @@ export function StaticPagesExperience() {
     const layer = getLayer(section);
     if (!layer) return;
 
-    // Bring incoming sheet above other sheets
-    sections.forEach((s) => {
-      const el = getLayer(s);
-      if (el) el.style.zIndex = s === section ? "53" : "52";
-    });
+    const otherSection: StaticSection = section === "about" ? "contact" : "about";
+    const projectsVisible = Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001;
+    const otherVisible = ratios.current[otherSection] > 0.001;
 
-    // If another static page is open, slide it down simultaneously while the new sheet rises over it!
-    if (current && current !== section) {
-      closeSection(current, true, true);
+    // Normalize 3-slot z-index ring: 51 (deepest) / 52 (receding card) / 53 (incoming top card)
+    const otherEl = getLayer(otherSection);
+    if (otherEl) {
+      otherEl.style.zIndex = current === otherSection ? "52" : "51";
     }
 
-    gsap.killTweensOf(layer, "scale,filter");
-    gsap.set(layer, { clearProps: "scale,filter" });
+    // If another static page is currently open, recede it in place (do NOT slide it down!)
+    if (otherVisible) {
+      recedeSection(otherSection);
+    }
+
+    gsap.killTweensOf(ratios.current, section);
+    gsap.killTweensOf(layer, "scale,filter,y");
+    gsap.set(layer, { clearProps: "scale,filter,y" });
     layer.style.zIndex = "53";
+
+    // If `section` was sitting underneath as a recessed card (`ratio >= 0.98`) while another card was on top,
+    // reset its starting ratio to 0 so it slides up cleanly from the bottom over the previous card!
+    if ((projectsVisible || otherVisible) && current !== section && ratios.current[section] >= 0.98) {
+      ratios.current[section] = 0;
+      apply(section, 0);
+    }
+
     activeSection.current = section;
     document.documentElement.dataset.staticSection = section;
     setActive(section);
@@ -134,20 +184,32 @@ export function StaticPagesExperience() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.to(ratios.current, {
       [section]: 1,
-      duration: reduced ? 0 : 1.08,
+      duration: reduced ? 0 : 1.04,
       ease: "expo.out",
       overwrite: "auto",
       onUpdate: () => apply(section, ratios.current[section]),
-      onComplete: () => apply(section, 1),
+      onComplete: () => {
+        apply(section, 1);
+        // Atomic cleanup: once this top card covers 100% of the screen, park all underneath cards!
+        sections.forEach((s) => {
+          if (s !== section) parkSection(s);
+        });
+        window.dispatchEvent(new CustomEvent("portfolio:stack-top-settled", {
+          detail: { top: section },
+        }));
+      },
     });
-  }, [apply, closeSection, getLayer]);
+  }, [apply, closeSection, getLayer, parkSection, recedeSection]);
 
   useEffect(() => {
     const requestSection = (event: Event) => {
       const section = (event as CustomEvent<{ section?: SectionRequest }>).detail?.section;
       if (section === "about" || section === "contact") {
-        // Simultaneous single-step handoff from Projects -> About/Contact!
-        if (Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001) {
+        // Card-stack over-slide from Projects -> About/Contact: recede Projects in place!
+        if (
+          document.documentElement.dataset.projectsActive === "true"
+          || Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001
+        ) {
           window.dispatchEvent(new CustomEvent("portfolio:close-projects", {
             detail: { mode: "slide-down", handoff: true },
           }));
@@ -157,11 +219,32 @@ export function StaticPagesExperience() {
     };
     const close = (event?: Event) => {
       const handoff = (event as CustomEvent<{ handoff?: boolean }> | undefined)?.detail?.handoff ?? false;
+      if (handoff) {
+        const current = activeSection.current;
+        activeSection.current = null;
+        document.documentElement.dataset.staticSection = "";
+        setReadySection(null);
+        sections.forEach((s) => {
+          if (s === current || (current === null && ratios.current[s] > 0.001)) {
+            recedeSection(s);
+          } else if (ratios.current[s] > 0.001) {
+            parkSection(s);
+          }
+        });
+        return;
+      }
+
+      const current = activeSection.current;
       let closingAny = false;
       sections.forEach((s) => {
-        if (ratios.current[s] > 0.001 || activeSection.current === s) {
-          closingAny = true;
-          closeSection(s, false, handoff);
+        if (ratios.current[s] > 0.001 || current === s) {
+          if (current && s !== current) {
+            // Immediately park recessed background cards so only the top active card slides down to Home
+            parkSection(s);
+          } else {
+            closingAny = true;
+            closeSection(s, false, false);
+          }
         }
       });
       if (!closingAny) {
@@ -173,21 +256,35 @@ export function StaticPagesExperience() {
         document.documentElement.dataset.staticProgress = "0.0000";
       }
     };
+    const onStackTopSettled = (event: Event) => {
+      const top = (event as CustomEvent<{ top?: string }>).detail?.top;
+      if (top === "project") {
+        sections.forEach((s) => parkSection(s));
+        activeSection.current = null;
+        setActive(null);
+        setReadySection(null);
+        setStaticScrollLock(false);
+        document.documentElement.dataset.staticSection = "";
+        document.documentElement.dataset.staticProgress = "0.0000";
+      }
+    };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && (activeSection.current || sections.some((s) => ratios.current[s] > 0.001))) {
         close();
       }
     };
 
     window.addEventListener("portfolio:request-section", requestSection);
     window.addEventListener("portfolio:close-static-pages", close);
+    window.addEventListener("portfolio:stack-top-settled", onStackTopSettled);
     document.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("portfolio:request-section", requestSection);
       window.removeEventListener("portfolio:close-static-pages", close);
+      window.removeEventListener("portfolio:stack-top-settled", onStackTopSettled);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [closeSection, openSection]);
+  }, [closeSection, openSection, parkSection, recedeSection]);
 
   useEffect(() => () => {
     setStaticScrollLock(false);
@@ -246,21 +343,29 @@ function PageContent({
 }) {
   const root = useRef<HTMLDivElement>(null);
 
+  const hasInitialized = useRef(false);
+
   useEffect(() => {
     const element = root.current;
     if (!element) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const parts = element.querySelectorAll<HTMLElement>("[data-page-part]");
     if (!ready) {
-      const exit = gsap.to(parts, {
-        autoAlpha: 0,
-        y: reduced ? 0 : 24,
-        duration: reduced ? 0 : 0.34,
-        ease: "power2.in",
+      if (!hasInitialized.current) {
+        gsap.set(parts, { autoAlpha: 0, y: reduced ? 0 : 30 });
+        return;
+      }
+      // Keep typography visible on the receding card while the incoming card slides up over it
+      const soften = gsap.to(parts, {
+        autoAlpha: 0.72,
+        y: reduced ? 0 : -6,
+        duration: reduced ? 0 : 0.48,
+        ease: "power2.out",
         overwrite: true,
       });
-      return () => { exit.kill(); };
+      return () => { soften.kill(); };
     }
+    hasInitialized.current = true;
     const entrance = gsap.fromTo(
       parts,
       { autoAlpha: 0, y: reduced ? 0 : 30, rotate: reduced ? 0 : 0.8 },

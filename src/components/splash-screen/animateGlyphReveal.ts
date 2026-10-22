@@ -5,9 +5,10 @@ import font from "./glyphPaths.json";
 
 let revealInstance = 0;
 const NS = "http://www.w3.org/2000/svg";
-const OUTLINE_DURATION = 1.18;
-const FILL_DURATION = 0.92;
-const CHARACTER_STAGGER = 0.045;
+const OUTLINE_DURATION = 1.08;
+const FILL_DURATION = 0.88;
+const CHARACTER_STAGGER = 0.04;
+const FILL_OVERLAP_RATIO = 0.62;
 
 /** Fixed font paths: no browser text stroking, estimated lengths or raster handoff. */
 export function animateGlyphReveal(root: HTMLElement, onComplete: () => void) {
@@ -24,7 +25,7 @@ export function animateGlyphReveal(root: HTMLElement, onComplete: () => void) {
       const units = font.unitsPerEm;
       const baseline = (units * 1.2 - font.ascent + font.descent) / 2 + font.ascent;
       const timeline = gsap.timeline({ onComplete });
-      const groups = letters.map((letter, index) => {
+      letters.forEach((letter, index) => {
         const glyph = font.glyphs[letter.textContent as keyof typeof font.glyphs];
         const svg = document.createElementNS(NS, "svg");
         const padding = units * 0.2;
@@ -43,75 +44,109 @@ export function animateGlyphReveal(root: HTMLElement, onComplete: () => void) {
           path.setAttribute("d", d);
           return path;
         };
-        const mask = document.createElementNS(NS, "mask");
-        mask.id = "splash-glyph-" + instance + "-" + index;
-        mask.setAttribute("maskUnits", "userSpaceOnUse");
-        mask.setAttribute("x", String(-units));
-        mask.setAttribute("y", String(-units));
-        mask.setAttribute("width", String(units * 3));
-        mask.setAttribute("height", String(units * 3));
+
+        // Liquid meniscus clipPath rising smoothly from descender (-650) to ascender (+1650)
+        const clip = document.createElementNS(NS, "clipPath");
+        clip.id = "splash-glyph-clip-" + instance + "-" + index;
+        clip.setAttribute("clipPathUnits", "userSpaceOnUse");
+        const w = glyph.advance;
+        const x0 = -padding * 1.5;
+        const x1 = w + padding * 1.5;
+        const xm = w * 0.5;
+        const yBot = -680;
+        const yTop = 1660;
+        const wave = makePath(`M ${x0} ${yBot} L ${x1} ${yBot} L ${x1} ${yBot} Q ${xm} ${yBot} ${x0} ${yBot} Z`);
+        clip.append(wave);
+
         const defs = document.createElementNS(NS, "defs");
-        defs.append(mask);
+        defs.append(clip);
         const ink = makePath(glyph.path);
         ink.setAttribute("fill", "#fff");
-        ink.setAttribute("mask", "url(#" + mask.id + ")");
+        ink.setAttribute("clip-path", "url(#" + clip.id + ")");
         ink.dataset.ink = "";
+
         const outline = document.createElementNS(NS, "g");
         outline.dataset.outline = "";
         const contours = glyph.path.match(/M[^M]+/g) || [];
-        const paths = contours.map((d, contourIndex) => {
+        const paths = contours.map((d) => {
           const edge = makePath(d);
           edge.setAttribute("fill", "none");
           edge.setAttribute("stroke", "#fff");
-          edge.setAttribute("stroke-width", String(units * 0.008));
+          edge.setAttribute("stroke-width", String(units * 0.0085));
           edge.setAttribute("stroke-linejoin", "round");
-          edge.setAttribute("stroke-linecap", "butt");
-          const fill = edge.cloneNode(true) as SVGPathElement;
-          // A stroke wider than the tiny i/j dot can self-intersect in WebKit.
-          const isDot = (letter.textContent === "i" || letter.textContent === "j") && contourIndex === contours.length - 1;
-          fill.setAttribute("stroke-width", String(units * (isDot ? 0.15 : 0.32)));
-          mask.append(fill);
+          edge.setAttribute("stroke-linecap", "round");
           outline.append(edge);
-          return { edge, fill, length: 0 };
+          return { edge, length: 0 };
         });
+
         group.append(defs, outline, ink);
         svg.append(group);
         letter.parentElement!.append(svg);
         overlays.push(svg);
+
         for (const path of paths) {
           path.length = path.edge.getTotalLength();
-          for (const element of [path.edge, path.fill]) {
-            element.setAttribute("stroke-dasharray", path.length + " " + path.length);
-            element.setAttribute("stroke-dashoffset", String(path.length));
-          }
+          path.edge.setAttribute("stroke-dasharray", path.length + " " + path.length);
+          path.edge.setAttribute("stroke-dashoffset", String(path.length));
         }
+
         // All geometry reads happen once, before playback.
         const total = paths.reduce((sum, path) => sum + path.length, 0);
         const distance = Math.abs(index - (letters.length - 1) / 2);
-        const start = 0.16 + distance * CHARACTER_STAGGER;
+        const start = 0.14 + distance * CHARACTER_STAGGER;
         timeline.set(svg, { visibility: "visible" }, start);
+
         let elapsed = 0;
         for (const path of paths) {
-          const duration = OUTLINE_DURATION * path.length / total;
-          timeline.to(path.edge, { attr: { "stroke-dashoffset": 0 }, duration, ease: "power1.inOut" }, start + elapsed);
+          const duration = OUTLINE_DURATION * (path.length / total);
+          timeline.to(
+            path.edge,
+            { attr: { "stroke-dashoffset": 0 }, duration, ease: "sine.inOut" },
+            start + elapsed,
+          );
           elapsed += duration;
         }
-        return { paths, total, distance, outline, ink };
+
+        // Overlap the liquid meniscus fill while the outline is still finishing (~62%)
+        const fillStart = start + OUTLINE_DURATION * FILL_OVERLAP_RATIO;
+        const fillState = { p: 0 };
+        const tiltSign = index % 2 === 0 ? 1 : -1;
+        const renderWave = () => {
+          const p = fillState.p;
+          const level = yBot + (yTop - yBot) * p;
+          const swell = Math.sin(p * Math.PI);
+          const tilt = swell * 115 * tiltSign;
+          const crest = swell * 240;
+          const yL = level - tilt;
+          const yR = level + tilt;
+          const yC = level + crest;
+          wave.setAttribute(
+            "d",
+            `M ${x0} ${yBot} L ${x1} ${yBot} L ${x1} ${yR.toFixed(1)} Q ${xm} ${yC.toFixed(1)} ${x0} ${yL.toFixed(1)} Z`,
+          );
+        };
+
+        timeline.to(
+          fillState,
+          {
+            p: 1,
+            duration: FILL_DURATION,
+            ease: "expo.out",
+            onUpdate: renderWave,
+          },
+          fillStart,
+        );
+
+        // Smoothly dissolve the hairline outline into the solid glyph fill
+        timeline.to(
+          outline,
+          { opacity: 0, duration: 0.24, ease: "power2.out" },
+          fillStart + FILL_DURATION * 0.65,
+        );
+        timeline.set(outline, { visibility: "hidden" }, fillStart + FILL_DURATION);
+        timeline.call(() => ink.removeAttribute("clip-path"), [], fillStart + FILL_DURATION);
       });
-      timeline.addLabel("fill", "+=0.05");
-      for (const { paths, total, distance, outline, ink } of groups) {
-        let elapsed = distance * 0.026;
-        paths.forEach((path, pathIndex) => {
-          const duration = Math.max(0.14, FILL_DURATION * path.length / total);
-          const offset = pathIndex > 0 ? Math.max(0, elapsed - duration) : elapsed;
-          timeline.to(path.fill, { attr: { "stroke-dashoffset": 0 }, duration, ease: "power1.inOut" }, "fill+=" + offset);
-          timeline.set(path.fill, { attr: { "stroke-dasharray": "none" } }, "fill+=" + (offset + duration));
-          elapsed = Math.max(elapsed, offset + duration);
-        });
-        // Completed fill remains the same geometry, with no DOM/text swap.
-        timeline.set(outline, { visibility: "hidden" }, "fill+=" + elapsed);
-        timeline.call(() => ink.removeAttribute("mask"), [], "fill+=" + elapsed);
-      }
+
       appendIdentityReveal(timeline, root);
       const stopPortal = appendPortalReveal(timeline, root);
       return () => { stopPortal(); overlays.forEach(svg => svg.remove()); };

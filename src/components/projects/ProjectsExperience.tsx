@@ -70,53 +70,97 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     setStackSurfaceProgress(surfacePath.current, next);
     sheet.style.setProperty("--sheet-shadow-alpha", (0.08 + (1 - next) * 0.24).toFixed(3));
     gsap.set(sheet, { autoAlpha: next > 0 ? 1 : 0, yPercent: (1 - next) * 100 });
-    if (scroller.current) scroller.current.style.pointerEvents = next >= 0.96 ? "auto" : "none";
+    if (scroller.current) scroller.current.style.pointerEvents = next >= 0.96 && targetOpen.current ? "auto" : "none";
     syncBackgroundDepth();
   }, [syncBackgroundDepth]);
 
-  const settle = useCallback((target?: number, handoff = false) => {
+  const parkUnderneath = useCallback(() => {
+    const sheet = layer.current;
+    gsap.killTweensOf(ratio);
+    if (sheet) {
+      gsap.killTweensOf(sheet);
+      gsap.set(sheet, { clearProps: "scale,filter,zIndex,y" });
+    }
+    targetOpen.current = false;
+    projectLabelVisible.current = false;
+    document.documentElement.dataset.projectsActive = "false";
+    apply(0);
+    setProjectScrollLock(false);
+    setActive(false);
+  }, [apply]);
+
+  const recedeUnderneath = useCallback(() => {
+    const sheet = layer.current;
+    targetOpen.current = false;
+    projectLabelVisible.current = false;
+    document.documentElement.dataset.projectsActive = "false";
+    if (!sheet || ratio.current <= 0.001) {
+      parkUnderneath();
+      return;
+    }
+    if (scroller.current) scroller.current.style.pointerEvents = "none";
+    gsap.killTweensOf(ratio);
+    gsap.killTweensOf(sheet, "scale,filter,y");
+    sheet.style.zIndex = "52";
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    gsap.to(sheet, {
+      scale: reduced ? 1 : 0.965,
+      y: reduced ? 0 : -14,
+      filter: reduced ? "none" : "brightness(0.55)",
+      duration: reduced ? 0 : 0.92,
+      ease: "expo.out",
+      overwrite: "auto",
+    });
+  }, [parkUnderneath]);
+
+  const settle = useCallback((target?: number) => {
     const destination = target ?? (ratio.current >= 0.5 ? 1 : 0);
     const sheet = layer.current;
     if (!sheet) return;
     targetOpen.current = destination > 0;
+    gsap.killTweensOf(ratio);
+    gsap.killTweensOf(sheet, "scale,filter,y");
+
     if (destination > 0) {
       setProjectScrollLock(true);
       setActive(true);
       projectLabelVisible.current = true;
       document.documentElement.dataset.projectsActive = "true";
       sheet.style.zIndex = "53";
-      gsap.killTweensOf(sheet, "scale,filter");
-      gsap.set(sheet, { clearProps: "scale,filter" });
+      gsap.set(sheet, { clearProps: "scale,filter,y" });
+      // If Projects was stationary underneath as a recessed card (`ratio === 1`),
+      // reset its entrance position to bottom (`0`) so it slides up cleanly over the previous active card!
+      const staticProgress = Number(document.documentElement.dataset.staticProgress ?? "0");
+      if (staticProgress > 0.001 && ratio.current >= 0.98) {
+        ratio.current = 0;
+        apply(0);
+      }
     } else {
       projectLabelVisible.current = false;
       document.documentElement.dataset.projectsActive = "false";
-      if (handoff) {
-        sheet.style.zIndex = "52";
-        gsap.to(sheet, {
-          scale: 0.96,
-          filter: "brightness(0.65)",
-          duration: 0.85,
-          ease: "expo.out",
-          overwrite: "auto",
-        });
-      }
+      gsap.set(sheet, { clearProps: "scale,filter,y" });
     }
+
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.to(ratio, {
       current: destination,
-      duration: reduced ? 0 : destination === 0 ? 0.96 : 1.08,
+      duration: reduced ? 0 : destination === 0 ? 0.92 : 1.04,
       ease: "expo.out",
       overwrite: true,
       onUpdate: () => apply(ratio.current),
       onComplete: () => {
         apply(destination);
         if (destination === 0) {
-          gsap.set(sheet, { clearProps: "scale,filter,zIndex" });
+          gsap.set(sheet, { clearProps: "scale,filter,zIndex,y" });
           setProjectScrollLock(false);
           setActive(false);
           window.dispatchEvent(new CustomEvent("portfolio:project-closed"));
           document.querySelector<HTMLAnchorElement>("[data-project-link='true']")?.focus({ preventScroll: true });
         } else {
+          // Top card has fully covered the viewport: atomically park any background static cards!
+          window.dispatchEvent(new CustomEvent("portfolio:stack-top-settled", {
+            detail: { top: "project" },
+          }));
           scroller.current?.focus({ preventScroll: true });
         }
       },
@@ -126,16 +170,18 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   const closeProjects = useCallback((mode: "hero-curtain" | "slide-down" = "slide-down", handoff = false) => {
     const heroElement = hero.current;
     if (!heroElement || returning.current) return;
+    if (handoff) {
+      recedeUnderneath();
+      return;
+    }
     targetOpen.current = false;
     if (ratio.current <= 0.001) {
-      setProjectScrollLock(false);
-      projectLabelVisible.current = false;
-      document.documentElement.dataset.projectsActive = "false";
+      parkUnderneath();
       return;
     }
 
     if (mode === "slide-down") {
-      settle(0, handoff);
+      settle(0);
       return;
     }
 
@@ -157,9 +203,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         overwrite: true,
         onComplete: () => {
           returning.current = false;
-          apply(0);
-          setProjectScrollLock(false);
-          setActive(false);
+          parkUnderneath();
           heroElement.classList.remove(styles.heroReturning);
           gsap.set(heroElement, { clearProps: "transform,filter,borderRadius" });
           window.dispatchEvent(new CustomEvent("portfolio:project-closed"));
@@ -167,7 +211,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         },
       });
     });
-  }, [apply, settle]);
+  }, [parkUnderneath, recedeUnderneath, settle]);
 
   useEffect(() => {
     const requestProject = (event?: Event) => {
@@ -175,13 +219,15 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         const section = (event as CustomEvent<{ section?: string }>).detail?.section;
         if (section !== "project") return;
       }
-      if (Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001) {
-        // Simultaneous single-step handoff: slide Static sheet down underneath while Projects rises on top!
+      const staticSectionActive = Boolean(document.documentElement.dataset.staticSection);
+      const staticProgress = Number(document.documentElement.dataset.staticProgress ?? "0");
+      if (staticSectionActive || staticProgress > 0.001) {
+        // Card-stack over-slide: recede Static sheet in place underneath while Projects rises on top!
         window.dispatchEvent(new CustomEvent("portfolio:close-static-pages", {
           detail: { handoff: true },
         }));
         settle(1);
-      } else if (ratio.current > 0.001 || returning.current) {
+      } else if (targetOpen.current && ratio.current > 0.5) {
         closeProjects("slide-down");
       } else {
         settle(1);
@@ -191,7 +237,19 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       const detail = (event as CustomEvent<{ mode?: "hero-curtain" | "slide-down"; handoff?: boolean }>).detail;
       const mode = detail?.mode ?? "slide-down";
       const handoff = detail?.handoff ?? false;
+      // If Projects is merely a recessed background card while a Static card is on top,
+      // park Projects immediately so only the visible top card slides down to Home!
+      if (!handoff && !targetOpen.current && Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001) {
+        parkUnderneath();
+        return;
+      }
       closeProjects(mode, handoff);
+    };
+    const onStackTopSettled = (event: Event) => {
+      const top = (event as CustomEvent<{ top?: string }>).detail?.top;
+      if (top && top !== "project") {
+        parkUnderneath();
+      }
     };
     const staticObserver = new MutationObserver(syncBackgroundDepth);
     staticObserver.observe(document.documentElement, {
@@ -202,13 +260,15 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     window.addEventListener("portfolio:request-section", requestProject);
     window.addEventListener("portfolio:toggle-projects", requestProject);
     window.addEventListener("portfolio:close-projects", closeFromLogo);
+    window.addEventListener("portfolio:stack-top-settled", onStackTopSettled);
     return () => {
       staticObserver.disconnect();
       window.removeEventListener("portfolio:request-section", requestProject);
       window.removeEventListener("portfolio:toggle-projects", requestProject);
       window.removeEventListener("portfolio:close-projects", closeFromLogo);
+      window.removeEventListener("portfolio:stack-top-settled", onStackTopSettled);
     };
-  }, [closeProjects, settle, syncBackgroundDepth]);
+  }, [closeProjects, parkUnderneath, settle, syncBackgroundDepth]);
 
   useEffect(() => () => {
     setProjectScrollLock(false);
@@ -217,10 +277,17 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape" && ratio.current > 0) closeProjects("hero-curtain"); };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || ratio.current <= 0) return;
+      if (!targetOpen.current && Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001) {
+        parkUnderneath();
+        return;
+      }
+      closeProjects("hero-curtain");
+    };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [closeProjects]);
+  }, [closeProjects, parkUnderneath]);
 
   return <>
     <div ref={hero} className={styles.hero}>

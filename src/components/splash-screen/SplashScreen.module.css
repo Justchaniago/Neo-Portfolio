@@ -30,8 +30,8 @@
   visibility: hidden;
   clip-path: inset(-0.1em -0.08em -0.1em -0.28em);
 }
-.dotMask { clip-path: inset(0 -0.08em 0 -0.06em); }
-.endingMask { clip-path: inset(0 -0.1em); }
+.dotMask { clip-path: inset(-0.15em -0.35em -0.15em -0.35em); }
+.endingMask { clip-path: inset(-0.15em -0.1em -0.15em -0.35em); }
 .dot, .ending { display: block; }
 .dot { position: relative; }
 .dotSpacing { visibility: hidden; }
