@@ -82,6 +82,7 @@ export function ProjectRail({ onChange }: { onChange?: (index: number) => void }
       if (!ready || moving || !direction) return;
       const step = Math.sign(direction);
       moving = true;
+      window.dispatchEvent(new CustomEvent("portfolio:rail-tick", { detail: { direction: step } }));
       animation?.kill();
       animation = gsap.timeline({ onComplete: () => {
         index = wrap(index + step);

@@ -78,29 +78,38 @@
 }
 
 .window {
+  --arch-w: clamp(136px, 22vw, 240px);
+  --arch-h: calc(var(--arch-w) * 1.24);
   position: absolute;
   z-index: 10;
   left: 50%;
   bottom: 0;
-  /* Start as a compact arch window at bottom-center matching the reference proportion */
-  width: min(24vw, 250px);
-  height: min(30vh, 300px);
-  border-radius: min(12vw, 125px) min(12vw, 125px) 0 0;
+  /* Lock arch aspect ratio (1 : 1.24) so mobile never stretches into a skinny tube */
+  width: var(--arch-w);
+  height: var(--arch-h);
+  border-radius: 999px 999px 0 0;
   background: #ffffff;
   box-shadow:
     0 0 0 1px rgb(255 255 255 / calc(min(1, var(--window-progress) * 4) * 0.25)),
     0 -18px 54px rgb(95 226 239 / calc(min(1, var(--window-progress) * 4) * (1 - var(--window-progress)) * 0.28)),
     0 -6px 24px rgb(255 255 255 / calc(min(1, var(--window-progress) * 4) * (1 - var(--window-progress)) * 0.35));
   opacity: calc(min(1, var(--window-progress) * 12));
-  /* Emerges cleanly as a small window from bottom, then expands across the entire viewport */
-  transform: translate3d(-50%, calc((1 - min(1, var(--window-progress) * 2.2)) * 115%), 0)
+  /* Emerges cleanly as a proportional doorway from bottom, then expands across the entire viewport */
+  transform: translate3d(-50%, calc((1 - min(1, var(--window-progress) * 2.4)) * 108%), 0)
     scale3d(
-      calc(1 + pow(max(0, (var(--window-progress) - 0.18) / 0.82), 1.65) * (var(--portal-scale-x, 8.5) - 1)),
-      calc(1 + pow(max(0, (var(--window-progress) - 0.18) / 0.82), 1.65) * (var(--portal-scale-y, 7.5) - 1)),
+      calc(1 + pow(max(0, (var(--window-progress) - 0.14) / 0.86), 1.6) * (var(--portal-scale-x, 8.5) - 1)),
+      calc(1 + pow(max(0, (var(--window-progress) - 0.14) / 0.86), 1.6) * (var(--portal-scale-y, 7.5) - 1)),
       1
     );
   transform-origin: center bottom;
   will-change: transform, opacity;
+}
+
+@media (max-width: 767px) {
+  .window {
+    --arch-w: clamp(150px, 42vw, 196px);
+    --arch-h: calc(var(--arch-w) * 1.22);
+  }
 }
 
 @media (max-width: 767px) {

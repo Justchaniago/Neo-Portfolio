@@ -175,6 +175,14 @@ export default function Home() {
           </span>
           <span className={styles.scrollCueLabel}>Scroll to explore</span>
         </div>
+
+        <div className={styles.heroTelemetry} aria-hidden="true">
+          <span className={styles.telemetryStatus}>
+            <span className={styles.telemetryDot} />
+            <span>AVAILABLE FOR SELECT WORK</span>
+          </span>
+          <span className={styles.telemetryCoords}>SURABAYA, ID · 07°15&apos;S 112°45&apos;E</span>
+        </div>
       </div>
       </ProjectsExperience>
       </div>

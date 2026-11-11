@@ -1,0 +1,109 @@
+.hud {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  top: 50%;
+  z-index: 58;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transform: translate3d(14px, -50%, 0);
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: difference;
+  color: #ffffff;
+}
+
+:global(html[data-splash-complete="true"]) .hud {
+  animation: hudEntrance 880ms cubic-bezier(0.16, 1, 0.3, 1) 920ms both;
+}
+
+:global(html[data-footer-active="true"]) .hud,
+:global(html[data-projects-active="true"]) .hud,
+:global(html[data-static-section="about"]) .hud,
+:global(html[data-static-section="contact"]) .hud {
+  opacity: 0 !important;
+  transform: translate3d(14px, -50%, 0) !important;
+  transition: opacity 240ms ease, transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.readout {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.78);
+}
+
+.code {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.divider {
+  opacity: 0.38;
+}
+
+.total {
+  opacity: 0.48;
+}
+
+.name {
+  margin-top: 4px;
+  color: rgb(255 255 255 / 0.88);
+}
+
+.layerTag {
+  color: #dfa13d;
+  font-weight: 600;
+}
+
+.track {
+  position: relative;
+  width: 1.5px;
+  height: 52px;
+  background: rgb(255 255 255 / 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  transform: scaleY(0);
+  transform-origin: 50% 0%;
+  will-change: transform;
+}
+
+@keyframes hudEntrance {
+  from {
+    opacity: 0;
+    transform: translate3d(14px, -50%, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
+@media (max-width: 1023px) {
+  .hud {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud,
+  :global(html[data-splash-complete="true"]) .hud {
+    opacity: 1;
+    transform: translate3d(0, -50%, 0);
+    animation: none;
+  }
+}

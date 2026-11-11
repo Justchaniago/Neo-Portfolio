@@ -225,3 +225,99 @@
     height: 100%;
   }
 }
+
+.heroTelemetry {
+  position: absolute;
+  right: max(24px, 3vw);
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+}
+
+:global(html[data-splash-complete="true"]) .heroTelemetry {
+  animation: scrollCueEntrance 880ms cubic-bezier(0.16, 1, 0.3, 1) 860ms both;
+}
+
+:global(html[data-hero-scrolling="true"]) .heroTelemetry {
+  opacity: 0 !important;
+  transform: translate3d(0, -8px, 0) !important;
+  transition: opacity 320ms ease, transform 320ms ease;
+}
+
+.telemetryStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(10 10 10 / 0.78);
+}
+
+.telemetryDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgb(16 185 129 / 0.18);
+  animation: telemetryPulse 2.4s ease-in-out infinite;
+}
+
+.telemetryCoords {
+  font: 500 9.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(10 10 10 / 0.48);
+}
+
+@keyframes telemetryPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.86);
+  }
+}
+
+@media (max-width: 767px) {
+  .heroTelemetry {
+    right: 18px;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.84);
+    border: 1px solid rgb(10 10 10 / 0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .telemetryStatus {
+    font-size: 8.5px;
+    letter-spacing: 0.11em;
+    color: rgb(10 10 10 / 0.85);
+  }
+
+  .telemetryCoords {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroTelemetry, :global(html[data-splash-complete="true"]) .heroTelemetry {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .telemetryDot {
+    animation: none;
+  }
+}

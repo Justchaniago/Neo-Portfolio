@@ -60,6 +60,19 @@ export function HeaderNav() {
       hasMeasured = true;
       setActiveSection(section);
 
+      const baseTitle = "chaniago.me — Creative Software Engineer";
+      const nextTitle =
+        section === "project"
+          ? "Projects — chaniago.me"
+          : section === "about"
+            ? "About — chaniago.me"
+            : section === "contact"
+              ? "Contact — chaniago.me"
+              : baseTitle;
+      if (document.title !== nextTitle) {
+        document.title = nextTitle;
+      }
+
       if (next === collapsed) return;
       collapsed = next;
       setCompact(next);
@@ -148,6 +161,11 @@ export function HeaderNav() {
               window.dispatchEvent(new CustomEvent("portfolio:request-section", {
                 detail: { section: item.label },
               }));
+            }}
+            onPointerEnter={(event) => {
+              if (event.pointerType === "mouse") {
+                window.dispatchEvent(new CustomEvent("portfolio:nav-hover", { detail: { index } }));
+              }
             }}
             onPointerMove={(event) => move(index, event)}
             onPointerLeave={() => reset(index)}

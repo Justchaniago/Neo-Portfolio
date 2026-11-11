@@ -305,6 +305,22 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       inert={!active}
       aria-hidden={!active}
       aria-label="Projects"
+      onDragRatio={(nextRatio) => {
+        gsap.killTweensOf(ratio);
+        apply(nextRatio);
+      }}
+      onDragRelease={(shouldClose) => {
+        if (shouldClose) {
+          window.dispatchEvent(new CustomEvent("portfolio:go-home"));
+          closeProjects("slide-down");
+        } else {
+          settle(1);
+        }
+      }}
+      onRequestClose={() => {
+        window.dispatchEvent(new CustomEvent("portfolio:go-home"));
+        closeProjects("slide-down");
+      }}
     >
       <div ref={scroller} tabIndex={-1}>
         <ProjectDetails activeIndex={projectIndex} />

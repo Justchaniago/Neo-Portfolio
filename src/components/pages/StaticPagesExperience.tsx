@@ -304,6 +304,29 @@ export function StaticPagesExperience() {
       inert={active !== "about"}
       aria-hidden={active !== "about"}
       aria-label="About"
+      onDragRatio={(nextRatio) => {
+        gsap.killTweensOf(ratios.current, "about");
+        apply("about", nextRatio);
+      }}
+      onDragRelease={(shouldClose) => {
+        if (shouldClose) {
+          window.dispatchEvent(new CustomEvent("portfolio:go-home"));
+          closeSection("about");
+        } else {
+          const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          gsap.to(ratios.current, {
+            about: 1,
+            duration: reduced ? 0 : 0.65,
+            ease: "expo.out",
+            overwrite: "auto",
+            onUpdate: () => apply("about", ratios.current.about),
+          });
+        }
+      }}
+      onRequestClose={() => {
+        window.dispatchEvent(new CustomEvent("portfolio:go-home"));
+        closeSection("about");
+      }}
     >
       <PageContent
         section="about"
@@ -322,6 +345,29 @@ export function StaticPagesExperience() {
       inert={active !== "contact"}
       aria-hidden={active !== "contact"}
       aria-label="Contact"
+      onDragRatio={(nextRatio) => {
+        gsap.killTweensOf(ratios.current, "contact");
+        apply("contact", nextRatio);
+      }}
+      onDragRelease={(shouldClose) => {
+        if (shouldClose) {
+          window.dispatchEvent(new CustomEvent("portfolio:go-home"));
+          closeSection("contact");
+        } else {
+          const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          gsap.to(ratios.current, {
+            contact: 1,
+            duration: reduced ? 0 : 0.65,
+            ease: "expo.out",
+            overwrite: "auto",
+            onUpdate: () => apply("contact", ratios.current.contact),
+          });
+        }
+      }}
+      onRequestClose={() => {
+        window.dispatchEvent(new CustomEvent("portfolio:go-home"));
+        closeSection("contact");
+      }}
     >
       <PageContent
         section="contact"

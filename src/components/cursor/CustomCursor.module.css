@@ -1,0 +1,140 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  mix-blend-mode: difference;
+}
+
+.root[data-visible="true"] {
+  opacity: 1;
+}
+
+:global(html:not([data-splash-complete="true"])) .root {
+  opacity: 0 !important;
+}
+
+.dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff;
+  will-change: transform;
+  transition:
+    width 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 200ms ease,
+    background-color 200ms ease;
+}
+
+.ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.42);
+  background: transparent;
+  will-change: transform, width, height;
+  transition:
+    width 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 260ms ease,
+    background-color 260ms ease,
+    border-radius 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.label {
+  font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffffff;
+  white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.86);
+  transition:
+    opacity 200ms ease,
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Interactive Link / Button Hover */
+.root[data-mode="interactive"] .dot {
+  width: 8px;
+  height: 8px;
+  background: #dfa13d;
+}
+
+.root[data-mode="interactive"] .ring {
+  width: 50px;
+  height: 50px;
+  border-color: rgb(223 161 61 / 0.72);
+  background: rgb(223 161 61 / 0.08);
+}
+
+/* Hero Portrait Iris Hover */
+.root[data-mode="portrait"] .dot {
+  width: 4px;
+  height: 4px;
+  opacity: 0.65;
+}
+
+.root[data-mode="portrait"] .ring {
+  width: 68px;
+  height: 28px;
+  border-color: rgb(255 255 255 / 0.78);
+  background: rgb(255 255 255 / 0.12);
+}
+
+.root[data-mode="portrait"] .label {
+  opacity: 0.95;
+  transform: scale(1);
+}
+
+/* Project Rail / Drag Pill Mode */
+.root[data-mode="rail"],
+.root[data-mode="drag"],
+.root[data-mode="globe"] {
+  mix-blend-mode: normal;
+}
+
+.root[data-mode="rail"] .dot,
+.root[data-mode="drag"] .dot,
+.root[data-mode="globe"] .dot {
+  opacity: 0;
+  width: 2px;
+  height: 2px;
+}
+
+.root[data-mode="rail"] .ring,
+.root[data-mode="drag"] .ring,
+.root[data-mode="globe"] .ring {
+  width: 92px;
+  height: 30px;
+  border-color: rgb(223 161 61 / 0.65);
+  background: rgb(10 10 10 / 0.88);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.32);
+}
+
+.root[data-mode="rail"] .label,
+.root[data-mode="drag"] .label,
+.root[data-mode="globe"] .label {
+  opacity: 1;
+  color: #dfa13d;
+  transform: scale(1);
+}
+
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .root {
+    display: none !important;
+  }
+}

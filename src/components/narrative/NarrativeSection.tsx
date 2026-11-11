@@ -188,8 +188,17 @@ export function NarrativeSection() {
         word.exitX = ux * exitDistance;
         word.exitY = uy * exitDistance;
       });
-      visual.style.setProperty("--portal-scale-x", String(width / Math.min(width * 0.22, 240) * 1.6));
-      visual.style.setProperty("--portal-scale-y", String(height / Math.min(height * 0.28, 290) * 1.8));
+      const isMobile = width < 768;
+      const archW = isMobile
+        ? Math.min(196, Math.max(150, width * 0.42))
+        : Math.min(240, Math.max(136, width * 0.22));
+      const archH = archW * (isMobile ? 1.22 : 1.24);
+      // Scale uniformly enough on both axes so the arch keeps its doorway silhouette while expanding
+      const targetScaleX = (width / archW) * 1.45;
+      const targetScaleY = (height / archH) * 1.38;
+      const unifiedScale = Math.max(targetScaleX, targetScaleY);
+      visual.style.setProperty("--portal-scale-x", String(unifiedScale));
+      visual.style.setProperty("--portal-scale-y", String(unifiedScale));
       burst.resize(width, height);
       if (reading) scroller.scrollTop = top + travel * current;
       scroll();

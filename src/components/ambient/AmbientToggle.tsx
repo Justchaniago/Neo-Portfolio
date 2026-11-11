@@ -181,7 +181,13 @@ export function AmbientToggle() {
   }, [status, hovered]);
 
   useEffect(() => {
-    const playChime = (freqStart: number, freqEnd: number, duration = 0.16) => {
+    const playChime = (
+      freqStart: number,
+      freqEnd: number,
+      duration = 0.16,
+      peakGain = 0.024,
+      waveType: OscillatorType = "sine",
+    ) => {
       const player = engine.current;
       if (!player || status !== "playing" || player.context.state !== "running") return;
       try {
@@ -189,13 +195,14 @@ export function AmbientToggle() {
         const now = ctx.currentTime;
         const osc = ctx.createOscillator();
         const chimeGain = ctx.createGain();
-        osc.type = "sine";
+        osc.type = waveType;
         osc.frequency.setValueAtTime(freqStart, now);
-        osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(40, freqEnd), now + duration);
         chimeGain.gain.setValueAtTime(0.0001, now);
-        chimeGain.gain.linearRampToValueAtTime(0.024, now + 0.018);
+        chimeGain.gain.linearRampToValueAtTime(peakGain, now + Math.min(0.014, duration * 0.25));
         chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-        osc.connect(chimeGain).connect(ctx.destination);
+        // Route through analyser so the harp string waveform visibly reacts to UI micro-sounds
+        osc.connect(chimeGain).connect(player.analyser);
         osc.start(now);
         osc.stop(now + duration + 0.02);
       } catch {
@@ -203,16 +210,37 @@ export function AmbientToggle() {
       }
     };
 
-    const onOpenSection = () => playChime(320, 480, 0.18);
-    const onCloseSection = () => playChime(420, 260, 0.16);
+    const onOpenSection = () => {
+      playChime(330, 495, 0.19, 0.024, "sine");
+      playChime(495, 660, 0.22, 0.012, "triangle");
+    };
+    const onCloseSection = () => {
+      playChime(440, 264, 0.17, 0.022, "sine");
+    };
+    const onRailTick = (event: Event) => {
+      const direction = (event as CustomEvent<{ direction?: number }>).detail?.direction ?? 1;
+      const startFreq = direction >= 0 ? 980 : 820;
+      const endFreq = direction >= 0 ? 290 : 240;
+      playChime(startFreq, endFreq, 0.042, 0.028, "triangle");
+    };
+    const onNavHover = (event: Event) => {
+      const index = (event as CustomEvent<{ index?: number }>).detail?.index ?? 0;
+      const pentatonic = [587.33, 659.25, 783.99, 880]; // D5, E5, G5, A5
+      const note = pentatonic[index % pentatonic.length];
+      playChime(note, note * 1.008, 0.095, 0.015, "sine");
+    };
 
     window.addEventListener("portfolio:request-section", onOpenSection);
     window.addEventListener("portfolio:toggle-projects", onOpenSection);
     window.addEventListener("portfolio:go-home", onCloseSection);
+    window.addEventListener("portfolio:rail-tick", onRailTick);
+    window.addEventListener("portfolio:nav-hover", onNavHover);
     return () => {
       window.removeEventListener("portfolio:request-section", onOpenSection);
       window.removeEventListener("portfolio:toggle-projects", onOpenSection);
       window.removeEventListener("portfolio:go-home", onCloseSection);
+      window.removeEventListener("portfolio:rail-tick", onRailTick);
+      window.removeEventListener("portfolio:nav-hover", onNavHover);
     };
   }, [status]);
 
