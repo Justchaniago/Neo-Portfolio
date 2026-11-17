@@ -1,9 +1,12 @@
 .root {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   z-index: 90;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
   opacity: 0;
   transition: opacity 220ms ease;
   mix-blend-mode: difference;
@@ -45,7 +48,7 @@
   border-radius: 999px;
   border: 1px solid rgb(255 255 255 / 0.42);
   background: transparent;
-  will-change: transform, width, height;
+  will-change: transform;
   transition:
     width 320ms cubic-bezier(0.16, 1, 0.3, 1),
     height 320ms cubic-bezier(0.16, 1, 0.3, 1),

@@ -5,7 +5,6 @@
   min-height: 100dvh;
   overflow: hidden;
   background: #fff;
-  will-change: transform, filter;
 }
 
 .heroReturning {

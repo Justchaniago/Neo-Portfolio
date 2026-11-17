@@ -10,6 +10,7 @@ import { NarrativeSection } from "@/components/narrative/NarrativeSection";
 import { AsciiGlobeSection } from "@/components/narrative/AsciiGlobeSection";
 import { TaglineSection } from "@/components/narrative/TaglineSection";
 import { StaticPagesExperience } from "@/components/pages/StaticPagesExperience";
+import { getPerformanceProfile } from "@/lib/performanceTier";
 
 const setProjectScrollLock = (locked: boolean) => {
   window.dispatchEvent(new CustomEvent("portfolio:scroll-lock", {
@@ -38,22 +39,50 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     const pStat = Number(document.documentElement.dataset.staticProgress ?? "0");
     const depth = Math.max(pProj, pStat);
 
+    const isOpen = String(depth > 0.001);
+    if (document.documentElement.dataset.overlayOpen !== isOpen) {
+      document.documentElement.dataset.overlayOpen = isOpen;
+    }
+    const isSettled = String(depth >= 0.999);
+    if (document.documentElement.dataset.overlaySettled !== isSettled) {
+      document.documentElement.dataset.overlaySettled = isSettled;
+    }
+
     if (reduced || depth <= 0.001) {
-      gsap.set(heroEl, { clearProps: "transform,filter,borderRadius" });
+      gsap.set(heroEl, { clearProps: "transform,filter,borderRadius,willChange" });
       return;
     }
 
+    if (depth >= 0.999) {
+      heroEl.style.willChange = "auto";
+      return;
+    }
+
+    const perf = getPerformanceProfile();
+    const useFilter = perf.tier === "high" && !perf.isSafari && !perf.isWindows;
+    heroEl.style.willChange = useFilter ? "transform, filter" : "transform";
+
     const scale = 1 - depth * 0.046;
     const y = -depth * 32;
-    const brightness = 1 - depth * 0.38;
     const radius = depth * 22;
-    gsap.set(heroEl, {
-      scale,
-      y,
-      borderRadius: `${radius.toFixed(1)}px`,
-      filter: `brightness(${brightness.toFixed(3)})`,
-      transformOrigin: "50% 18%",
-    });
+    if (useFilter) {
+      const brightness = 1 - depth * 0.38;
+      gsap.set(heroEl, {
+        scale,
+        y,
+        borderRadius: `${radius.toFixed(1)}px`,
+        filter: `brightness(${brightness.toFixed(3)})`,
+        transformOrigin: "50% 18%",
+      });
+    } else {
+      gsap.set(heroEl, {
+        scale,
+        y,
+        borderRadius: `${radius.toFixed(1)}px`,
+        clearProps: "filter",
+        transformOrigin: "50% 18%",
+      });
+    }
   }, []);
 
   const apply = useCallback((nextRatio: number) => {
@@ -103,10 +132,12 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     gsap.killTweensOf(sheet, "scale,filter,y");
     sheet.style.zIndex = "52";
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const perf = getPerformanceProfile();
+    const useFilter = perf.tier === "high" && !perf.isSafari && !perf.isWindows;
     gsap.to(sheet, {
       scale: reduced ? 1 : 0.965,
       y: reduced ? 0 : -14,
-      filter: reduced ? "none" : "brightness(0.55)",
+      filter: reduced || !useFilter ? "none" : "brightness(0.55)",
       duration: reduced ? 0 : 0.92,
       ease: "expo.out",
       overwrite: "auto",

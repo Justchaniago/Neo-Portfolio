@@ -20,9 +20,9 @@ export function createAsciiSweep() {
   const offset = (y: number) => 0.48 * (1 - y / height) + 0.025 * Math.sin(y / height * 12) + 0.012 * Math.sin(y / height * 31);
   const sweep = (p: number) => -0.14 + 1.28 * clamp((p - 0.24) / 0.46);
   return {
-    resize(w: number, h: number, ratio: number, headerBottom: number) {
+    resize(w: number, h: number, ratio: number, headerBottom: number, cellBoost = 0) {
       width = w; height = h; dpr = ratio;
-      cell = width < 600 ? 4 : 6;
+      cell = (width < 600 ? 4 : 6) + cellBoost;
       row = cell * 1.25;
       for (const canvas of [field, layer, rippled]) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
       moving.clear();
@@ -35,6 +35,7 @@ export function createAsciiSweep() {
       fieldCtx.textAlign = "center"; fieldCtx.textBaseline = "middle";
       const clearUntil = headerBottom + 16;
       const feather = Math.max(48, Math.min(120, height * 0.14));
+      fieldCtx.fillStyle = "#12161a";
       // Same grid origin as the map, extended across the full viewport.
       for (let y = gridStartY; y < height + row; y += row) {
         const density = smooth((y - clearUntil) / feather);
@@ -44,11 +45,12 @@ export function createAsciiSweep() {
           const random = seed(x / cell, (y - 100) / row);
           const alpha = (0.5 + random * 0.42) * density;
           const glyph = palette[Math.floor(random * palette.length)];
-          fieldCtx.fillStyle = `rgba(18,22,26,${alpha})`;
+          fieldCtx.globalAlpha = alpha;
           fieldCtx.fillText(glyph, x, y);
           cells[index] = { x, y, glyph, alpha };
         }
       }
+      fieldCtx.globalAlpha = 1;
     },
     covered(x: number, y: number, progress: number) {
       return smooth((sweep(progress) - (0.52 * x / width + offset(y)) + 0.04) / 0.08);

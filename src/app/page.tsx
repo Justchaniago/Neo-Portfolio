@@ -6,21 +6,69 @@ import { AntigravityHalo } from "@/components/animations/AntigravityHalo";
 import { HeroPortrait } from "@/components/hero/HeroPortrait";
 import { CurvedMobileTagline } from "@/components/hero/CurvedMobileTagline";
 import { ProjectsExperience } from "@/components/projects/ProjectsExperience";
+import { getPerformanceProfile } from "@/lib/performanceTier";
 import styles from "./Home.module.css";
 
 export default function Home() {
   const page = useRef<HTMLElement>(null);
+  const heroSurface = useRef<HTMLDivElement>(null);
   const portraitLayer = useRef<HTMLDivElement>(null);
   const pageContent = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
+    getPerformanceProfile();
     const scroller = page.current;
+    const heroBox = heroSurface.current;
     const layer = portraitLayer.current;
-    if (!scroller || !layer) return;
+    if (!scroller || !heroBox || !layer) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const scrollLocks = new Set<string>();
+    let viewportHeight = Math.max(1, scroller.clientHeight);
+    let lastProgress = -1;
+    let lastOffset = -1;
+    let frame = 0;
+
+    const syncHeroScroll = (scrollTop: number) => {
+      const clampedScroll = Math.max(0, scrollTop);
+      const distance = Math.min(clampedScroll, viewportHeight);
+      const progress = reduced.matches ? 0 : distance / viewportHeight;
+      const offset = reduced.matches ? 0 : distance * 0.25;
+
+      if (Math.abs(offset - lastOffset) > 0.05) {
+        lastOffset = offset;
+        layer.style.setProperty("--portrait-offset", `${offset.toFixed(2)}px`);
+      }
+      if (Math.abs(progress - lastProgress) > 0.0005) {
+        lastProgress = progress;
+        heroBox.style.setProperty("--hero-scroll-progress", progress.toFixed(4));
+      }
+
+      const scrolling = String(clampedScroll > 1);
+      if (document.documentElement.dataset.heroScrolling !== scrolling) {
+        document.documentElement.dataset.heroScrolling = scrolling;
+      }
+    };
+
+    const startRaf = () => {
+      if (frame || reduced.matches || document.hidden || scrollLocks.size > 0 || !lenisRef.current) return;
+      const raf = (time: number) => {
+        frame = 0;
+        if (document.hidden || scrollLocks.size > 0 || !lenisRef.current) return;
+        lenisRef.current.raf(time);
+        frame = requestAnimationFrame(raf);
+      };
+      frame = requestAnimationFrame(raf);
+    };
+
+    const stopRaf = () => {
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
+    };
+
     const setScrollLock = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: string; locked?: boolean }>).detail;
       const source = detail?.source;
@@ -36,11 +84,14 @@ export default function Home() {
       if (locked) {
         scroller.style.overflowY = "hidden";
         lenisRef.current?.stop();
+        stopRaf();
       } else {
         scroller.style.removeProperty("overflow-y");
         lenisRef.current?.start();
+        startRaf();
       }
     };
+
     const goHome = () => {
       const isLayerActive = Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001
         || Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001
@@ -63,25 +114,21 @@ export default function Home() {
     window.addEventListener("portfolio:go-home", goHome);
     window.addEventListener("portfolio:scroll-lock", setScrollLock);
     const update = () => {
-      const distance = Math.max(0, Math.min(scroller.scrollTop, scroller.clientHeight));
-      const progress = distance / Math.max(1, scroller.clientHeight);
-      layer.style.setProperty("--portrait-offset", `${reduced.matches ? 0 : distance * 0.25}px`);
-      document.documentElement.style.setProperty("--hero-scroll-progress", `${reduced.matches ? 0 : progress}`);
-      const scrolling = String(scroller.scrollTop > 1);
-      if (document.documentElement.dataset.heroScrolling !== scrolling) {
-        document.documentElement.dataset.heroScrolling = scrolling;
-      }
+      syncHeroScroll(scroller.scrollTop);
     };
 
     update();
-    scroller.addEventListener("scroll", update, { passive: true });
     reduced.addEventListener("change", update);
     const resizeObserver = new ResizeObserver(() => {
+      viewportHeight = Math.max(1, scroller.clientHeight);
+      lastProgress = -1;
+      lastOffset = -1;
       update();
     });
     resizeObserver.observe(scroller);
 
     if (reduced.matches || !pageContent.current) {
+      scroller.addEventListener("scroll", update, { passive: true });
       return () => {
         window.removeEventListener("portfolio:go-home", goHome);
         window.removeEventListener("portfolio:scroll-lock", setScrollLock);
@@ -91,7 +138,7 @@ export default function Home() {
         reduced.removeEventListener("change", update);
         resizeObserver.disconnect();
         delete document.documentElement.dataset.heroScrolling;
-        document.documentElement.style.removeProperty("--hero-scroll-progress");
+        heroBox.style.removeProperty("--hero-scroll-progress");
       };
     }
 
@@ -106,37 +153,31 @@ export default function Home() {
     lenisRef.current = lenis;
     if (scrollLocks.size > 0) lenis.stop();
     const onLenisScroll = (instance: Lenis) => {
-      const distance = Math.max(0, Math.min(instance.scroll, scroller.clientHeight));
-      const progress = distance / Math.max(1, scroller.clientHeight);
-      layer.style.setProperty("--portrait-offset", `${distance * 0.25}px`);
-      document.documentElement.style.setProperty("--hero-scroll-progress", `${progress}`);
-      const scrolling = String(instance.scroll > 1);
-      if (document.documentElement.dataset.heroScrolling !== scrolling) {
-        document.documentElement.dataset.heroScrolling = scrolling;
-      }
+      syncHeroScroll(instance.scroll);
     };
     lenis.on("scroll", onLenisScroll);
-    let frame = 0;
-    const raf = (time: number) => {
-      lenis.raf(time);
-      frame = requestAnimationFrame(raf);
+
+    const onVisibilityChange = () => {
+      if (document.hidden) stopRaf();
+      else startRaf();
     };
-    frame = requestAnimationFrame(raf);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    startRaf();
 
     return () => {
       window.removeEventListener("portfolio:go-home", goHome);
       window.removeEventListener("portfolio:scroll-lock", setScrollLock);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       scrollLocks.clear();
       scroller.style.removeProperty("overflow-y");
-      scroller.removeEventListener("scroll", update);
       reduced.removeEventListener("change", update);
       resizeObserver.disconnect();
       lenis.off("scroll", onLenisScroll);
       lenis.destroy();
       lenisRef.current = null;
-      cancelAnimationFrame(frame);
+      stopRaf();
       delete document.documentElement.dataset.heroScrolling;
-      document.documentElement.style.removeProperty("--hero-scroll-progress");
+      heroBox.style.removeProperty("--hero-scroll-progress");
     };
   }, []);
 
@@ -144,7 +185,7 @@ export default function Home() {
     <main ref={page} className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-white">
       <div ref={pageContent} className="min-h-full">
       <ProjectsExperience>
-      <div className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden w-full">
+      <div ref={heroSurface} className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden w-full">
         <div className={`${styles.haloLayer} absolute inset-0 z-0 pointer-events-auto`}>
           <AntigravityHalo />
         </div>

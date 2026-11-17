@@ -23,6 +23,13 @@
   filter: drop-shadow(0 -24px 48px rgb(0 0 0 / var(--stack-shadow-alpha, 0.28)));
 }
 
+:global(html[data-perf-tier="low"]) .surfacePath,
+:global(html[data-perf-tier="medium"]) .surfacePath,
+:global(html[data-browser-engine="webkit"]) .surfacePath,
+:global(html[data-platform="windows"]) .surfacePath {
+  filter: none;
+}
+
 .content {
   position: relative;
   z-index: 2;

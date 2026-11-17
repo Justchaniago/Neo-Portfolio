@@ -1,71 +1,71 @@
-# 🚀 Neo-Portfolio: Tech Stack & Architecture Document
+# Neo-Portfolio: Tech Stack & Architecture
 
-Dokumen ini berisi rincian *tech stack*, arsitektur animasi, dan panduan pengembangan portofolio modern berkinerja tinggi (*high-performance & interactive portfolio*).
+Dokumen ini merangkum *tech stack*, arsitektur komponen, dan sistem optimasi performa pada **chaniago.me (`neo-portfolio`)**.
 
-Semua UI dan animasi wajib mobile-first. Ikuti [Mobile & Animation Guide](MOBILE_GUIDE.md) untuk aturan responsive, baseline splash, aksesibilitas, dan checklist verifikasi.
+Semua UI dan animasi wajib mengikuti [Mobile & Animation Guide](MOBILE_GUIDE.md) untuk aturan *mobile-first*, baseline splash screen, aksesibilitas (`prefers-reduced-motion`), dan standar verifikasi.
 
 ---
 
-## 🛠️ Core Tech Stack
+## Core Tech Stack
 
-| Kategori | Teknologi | Deskripsi & Peran |
+| Kategori | Teknologi | Peran |
 | :--- | :--- | :--- |
-| **Framework** | **Next.js (App Router)** | React framework modern dengan Server-Side Rendering (SSR) & Static Site Generation (SSG) untuk performa & SEO maksimal. |
-| **Language** | **TypeScript** | Memastikan keamanan tipe data (*type safety*), autocompletion yang handal, serta kode yang lebih bersih & mudah di-maintain. |
-| **Styling** | **Tailwind CSS** | Utility-first CSS framework untuk pengkodean style yang cepat, konsisten, dan responsif. |
-| **UI Components** | **Lucide React / Shadcn UI** | Set ikon modern dan pustaka komponen yang fleksibel & accessible. |
+| **Framework** | **Next.js 16 (App Router)** | Routing, metadata/OG image generation, dan optimasi bundle produksi. |
+| **UI Library** | **React 19 + TypeScript 5** | Komponen interaktif dengan *strict typing* dan manajemen lifecycle DOM/Canvas. |
+| **Styling** | **Tailwind CSS v4 + CSS Modules** | Layout dasar dengan Tailwind v4 serta isolasi animasi spesifik menggunakan CSS Modules. |
+| **Icons** | **Lucide React** | Ikon UI ringan untuk navigasi, Command Palette, dan tautan eksternal. |
 
 ---
 
-## 🎭 Animation & Graphics Stack
+## Animation, Audio & Graphics Stack
 
-| Kategori | Library | Kegunaan |
+| Kategori | Teknologi | Kegunaan |
 | :--- | :--- | :--- |
-| **UI & Micro-Interactions** | **Framer Motion** | Animasi komponen UI, hover effects, enter/exit transitions, dan gestures (drag/tap). |
-| **Complex Scroll & Timelines** | **GSAP (GreenSock) + ScrollTrigger** | Animasi kompleks berbasis scroll, masking effect, pinning section, dan timeline beruntun. |
-| **Smooth Scrolling** | **Lenis Scroll (@studio-freight/lenis / lenis)** | Memberikan efek *inertia/smooth scroll* kelas atas layaknya website Apple atau Awwwards. |
-| **3D & Graphics (Optional)** | **Three.js / React Three Fiber / Canvas** | Pengolahan objek 3D interaktif, particle background, dan shader effects. |
+| **Timelines & Transitions** | **GSAP 3** | Timeline splash screen, iris reveal pada potret hero, transisi *card-stack* (`Projects`, `About`, `Contact`), dan wordmark footer. |
+| **Smooth Scrolling** | **Lenis** | *Smooth wheel/touch scrolling* dengan sinkronisasi *scroll lock* saat overlay atau mode baca aktif. |
+| **WebGL Shader** | **Three.js** | `AntigravityHalo` — ribuan partikel *Poisson-disc* dengan custom vertex/fragment shader dan proyeksi kursor analitis. |
+| **2D Canvas Engines** | **HTML5 Canvas 2D** | `radialBurst` (warp bintang), `AsciiGlobeSection` + `asciiSweep` (proyeksi bola dunia ke peta Indonesia), dan transisi piksel potret mobile. |
+| **Web Audio** | **Web Audio API** | `AmbientToggle` — visualisasi gelombang *real-time* (`AnalyserNode`) dan sintesis efek suara UI pentatonik. |
+| **Adaptive Performance** | **`performanceTier.ts`** | Deteksi kapabilitas GPU/CPU/Browser (Chrome, Safari WebKit, Windows) + pemantauan FPS *real-time* untuk menyesuaikan DPR, kepadatan partikel, dan efek *filter/blur*. |
 
 ---
 
-## 📁 Struktur Direktori Proyek
+## Struktur Direktori
 
 ```text
 neo-portfolio/
 ├── docs/
-│   └── TECH_STACK.md          # Dokumen Arsitektur & Tech Stack (File Ini)
-├── src/
-│   ├── app/                   # Next.js App Router (Pages, Layout, API)
-│   ├── components/            # Komponen Modular UI
-│   │   ├── ui/                # Base UI (Button, Card, Input)
-│   │   ├── animations/        # Reusable Animation Wrappers
-│   │   ├── loading/           # Loading / Preloader Screen (Part 1)
-│   │   ├── header/            # Navbar & Header (Part 2)
-│   │   └── sections/          # Hero, About, Projects, Contact
-│   ├── hooks/                 # Custom React Hooks (Scroll, Window Size, dll)
-│   ├── lib/                   # Utility & Helper Functions (GSAP config, utils)
-│   └── styles/                # Global Styles & Custom CSS Variables
-├── public/                    # Assets (Gambar, Font, SVG, 3D Models)
-├── tailwind.config.ts         # Konfigurasi Tailwind CSS
-├── tsconfig.json              # Konfigurasi TypeScript
-└── package.json               # Dependensi & Script Proyek
+│   ├── MOBILE_GUIDE.md          # Panduan wajib responsive & animasi mobile-first
+│   └── TECH_STACK.md            # Dokumen arsitektur & tech stack
+├── public/
+│   ├── audio/                   # Track audio ambient (ambient.mp3)
+│   ├── fonts/                   # Font display wordmark (DRUNKFONTS-Regular.otf)
+│   ├── maps/                    # Data poligon bumi ringkas (earth.json)
+│   ├── hero-justchaniago.png
+│   └── hero-justchaniago-left.png
+├── scripts/
+│   └── prepare-globe-data.mjs   # Script pemroses GeoJSON ke earth.json
+└── src/
+    ├── app/
+    │   ├── globals.css          # Konfigurasi font, variabel root, dan style dasar
+    │   ├── Home.module.css      # Style spesifik halaman utama / Hero
+    │   ├── icon.svg             # Favicon aplikasi
+    │   ├── layout.tsx           # Root layout (SplashScreen, Header, CustomCursor, CommandPalette, SpatialHud)
+    │   ├── opengraph-image.tsx  # Dynamic OpenGraph image generator
+    │   └── page.tsx             # Halaman utama & orkestrasi Lenis scroll
+    ├── components/
+    │   ├── ambient/             # Pemutar audio ambient & visualisasi gelombang SVG
+    │   ├── animations/          # AntigravityHalo (Three.js) & InteractionBurst
+    │   ├── command/             # Command Palette (Cmd/Ctrl + K)
+    │   ├── cursor/              # Custom cursor kontekstual
+    │   ├── header/              # Header utama, animasi logo, navigasi desktop & mobile
+    │   ├── hero/                # HeroPortrait (iris reveal) & CurvedMobileTagline
+    │   ├── hud/                 # SpatialHud (indikator chapter scroll)
+    │   ├── layout/              # StackSection (komponen sheet/card-stack)
+    │   ├── narrative/           # NarrativeSection, AsciiGlobeSection, TaglineSection, & Footer
+    │   ├── pages/               # StaticPagesExperience (About & Contact)
+    │   ├── projects/            # ProjectsExperience, ProjectRail, & ProjectDetails
+    │   └── splash-screen/       # SplashScreen 3-tahap (glyph reveal, identity shift, portal)
+    └── lib/
+        └── performanceTier.ts   # Engine deteksi perangkat & adaptasi performa dinamis
 ```
-
----
-
-## 🛣️ Roadmap Pengembangan (Part per Part)
-
-1. **Part 1: Setup & Custom Preloader (Loading Screen)**
-   - Animasi angka / logo reveal menggunakan Framer Motion / GSAP.
-   - Smooth exit transition setelah ketersediaan halaman terverifikasi.
-2. **Part 2: Interactive Header & Navigation Bar**
-   - Sticky Glassmorphism Header.
-   - Mobile Hamburger Menu dengan Staggered Animation.
-   - Dark/Light mode toggle (jika diperlukan).
-3. **Part 3: Hero Section & Smooth Scroll Integration**
-   - Integrasi Lenis Smooth Scroll.
-   - Animasi kemunculan teks hero (Split text effect).
-4. **Part 4: Interactive Work/Project Showcase**
-   - Cards dengan efek hover 3D / Parallax scroll.
-5. **Part 5: Skills, About, & Contact Section**
-6. **Part 6: Optimization & Deployment (Vercel)**

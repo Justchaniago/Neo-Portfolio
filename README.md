@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# chaniago.me (`neo-portfolio`)
 
-## Getting Started
+Interactive, mobile-first portfolio of **Just Chaniago** — Freelance Software Engineer, Creative Developer, and Systems Architect based in Surabaya, Indonesia.
 
-First, run the development server:
+## Key Highlights
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Three-Stage Splash Intro**: SVG glyph meniscus reveal (`justchaniago`), identity shift to `chaniago.me`, and full-resolution circular portal handoff.
+- **Interactive WebGL & 2D Canvas**:
+  - Custom Three.js shader particle ring (`AntigravityHalo`) with Poisson-disc distribution and analytical pointer tracking.
+  - Scroll-driven narrative scatter, radial star-burst (`radialBurst`), and interactive orthographic-to-equirectangular ASCII globe (`AsciiGlobeSection` + `asciiSweep`).
+- **Card-Stack Overlay Navigation**: Smooth GSAP-driven sheet transitions (`StackSection`) for `Projects`, `About`, and `Contact` alongside a `Cmd/Ctrl + K` Command Palette.
+- **Adaptive Performance Engine (`src/lib/performanceTier.ts`)**: Hardware/WebGL capability detection + real-time FPS monitoring that dynamically scales DPR, shader density, canvas resolution, and compositor filters across Chrome, Safari, and Windows/macOS devices.
+
+## Project Structure
+
+```text
+neo-portfolio/
+├── docs/
+│   ├── MOBILE_GUIDE.md          # Mobile-first & animation acceptance criteria
+│   └── TECH_STACK.md            # Architecture & technology reference
+├── public/
+│   ├── audio/                   # Ambient audio loop asset
+│   ├── fonts/                   # Display wordmark font (DRUNKFONTS)
+│   ├── maps/                    # Preprocessed Natural Earth land polygons
+│   ├── hero-justchaniago.png
+│   └── hero-justchaniago-left.png
+├── scripts/
+│   └── prepare-globe-data.mjs   # GeoJSON-to-compact polygon preprocessor
+└── src/
+    ├── app/                     # Next.js App Router root layout, page, metadata & styles
+    ├── components/
+    │   ├── ambient/             # Web Audio API harmonic synthesizer & waveform toggle
+    │   ├── animations/          # AntigravityHalo (Three.js) & InteractionBurst
+    │   ├── command/             # Keyboard-first Command Palette (Cmd/Ctrl + K)
+    │   ├── cursor/              # Context-aware custom cursor
+    │   ├── header/              # Header logo timeline, desktop nav & mobile drawer
+    │   ├── hero/                # Dual-layer iris portrait & curved mobile Saturn tagline
+    │   ├── hud/                 # Spatial scroll chapter indicator
+    │   ├── layout/              # Reusable draggable/animated StackSection sheet
+    │   ├── narrative/           # Narrative scatter, radial burst, ASCII globe & footer reveal
+    │   ├── pages/               # About & Contact card-stack experiences
+    │   ├── projects/            # Interactive project rail & detail showcase
+    │   └── splash-screen/       # Three-stage splash screen & portal reveal
+    └── lib/
+        └── performanceTier.ts   # Dynamic device capability & real-time FPS tiering
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Start development server
+npm run dev
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Run ESLint
+npm run lint
 
-## Learn More
+# Create production build
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Documentation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Mobile & Animation Guide](docs/MOBILE_GUIDE.md)
+- [Tech Stack & Architecture](docs/TECH_STACK.md)

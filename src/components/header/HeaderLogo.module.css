@@ -21,7 +21,8 @@
   transition: opacity 200ms ease, visibility 0s;
 }
 .nav { display: flex; align-items: center; gap: clamp(14px, 2.2vw, 36px); margin-left: auto; pointer-events: auto; }
-.navLink { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding-inline: 0.14em; margin-inline: -0.14em; color: inherit; font-size: clamp(1.5rem, 2.5vw, 1.75rem); font-weight: 600; font-optical-sizing: none; letter-spacing: -0.045em; line-height: 1.25; text-decoration: none; touch-action: manipulation; will-change: transform; }
+.navLink { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding-inline: 0.14em; margin-inline: -0.14em; color: inherit; font-size: clamp(1.5rem, 2.5vw, 1.75rem); font-weight: 600; font-optical-sizing: none; letter-spacing: -0.045em; line-height: 1.25; text-decoration: none; touch-action: manipulation; }
+.navLink:hover, .navLink:focus-visible { will-change: transform; }
 .navLink::after { position: absolute; right: 0.14em; bottom: 5px; left: 0.14em; height: 1.5px; content: ""; background: currentColor; opacity: 0.85; transform: scaleX(0); transform-origin: right center; transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1); }
 .navLink:hover::after, .navLink:focus-visible::after { transform: scaleX(1); transform-origin: left center; }
 .navLink:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; border-radius: 2px; }

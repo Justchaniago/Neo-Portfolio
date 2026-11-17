@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
+import { getPerformanceProfile } from "@/lib/performanceTier";
 import styles from "./StaticPagesExperience.module.css";
 
 type StaticSection = "about" | "contact";
@@ -65,10 +66,12 @@ export function StaticPagesExperience() {
     gsap.killTweensOf(layer, "scale,filter,y");
     layer.style.zIndex = "52";
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const perf = getPerformanceProfile();
+    const useFilter = perf.tier === "high" && !perf.isSafari && !perf.isWindows;
     gsap.to(layer, {
       scale: reduced ? 1 : 0.965,
       y: reduced ? 0 : -14,
-      filter: reduced ? "none" : "brightness(0.55)",
+      filter: reduced || !useFilter ? "none" : "brightness(0.55)",
       duration: reduced ? 0 : 0.92,
       ease: "expo.out",
       overwrite: "auto",

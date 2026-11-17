@@ -44,6 +44,7 @@ export function TaglineSection() {
       vrot: number;
     }[] = [];
     let width = 1, height = 1, textWidth = 1, top = 0, travel = 1, disposed = false;
+    let stageLeft = 0, stageTop = 0, visible = false;
     let currentProgress = 0, targetProgress = 0, raf = 0, lastTime = 0;
     let titleHeight = 1, totalTravel = 1, footerStart = 1;
     let footerProgress = 0;
@@ -51,8 +52,10 @@ export function TaglineSection() {
 
     const syncFooterAccess = () => {
       const root = document.documentElement;
-      const overlayOpen = Number(root.dataset.projectsProgress ?? 0) > 0.001
-        || Number(root.dataset.staticProgress ?? 0) > 0.001;
+      const overlayOpen =
+        root.dataset.overlayOpen === "true" ||
+        Number(root.dataset.projectsProgress ?? 0) > 0.001 ||
+        Number(root.dataset.staticProgress ?? 0) > 0.001;
       const active = !overlayOpen && (reduced.matches
         ? scroller.scrollTop >= top + height * 0.75
         : footerProgress > 0.015);
@@ -102,6 +105,9 @@ export function TaglineSection() {
           vrot: prev?.vrot ?? 0,
         };
       });
+      const stageRect = stage.getBoundingClientRect();
+      stageLeft = stageRect.left;
+      stageTop = stageRect.top;
       top = section.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       // Preserve the original 500dvh section's 400dvh tagline journey.
       travel = Math.max(1, height * 4);
@@ -208,7 +214,7 @@ export function TaglineSection() {
 
     const tick = (time: number) => {
       raf = 0;
-      if (disposed) return;
+      if (disposed || !visible || document.hidden) return;
       const dt = Math.min(50, time - (lastTime || time - 16));
       lastTime = time;
       currentProgress += (targetProgress - currentProgress) * (1 - Math.exp(-dt / 90));
@@ -220,17 +226,16 @@ export function TaglineSection() {
     };
 
     const wake = () => {
-      if (!raf && !disposed && !reduced.matches) {
+      if (!raf && !disposed && visible && !document.hidden && !reduced.matches) {
         lastTime = 0;
         raf = requestAnimationFrame(tick);
       }
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (reduced.matches || footerProgress >= 0.72) return;
-      const rect = stage.getBoundingClientRect();
-      const nx = e.clientX - rect.left;
-      const ny = e.clientY - rect.top;
+      if (reduced.matches || !visible || footerProgress >= 0.72) return;
+      const nx = e.clientX - stageLeft;
+      const ny = e.clientY - stageTop;
       if (pointerActive) {
         pointerVX = Math.max(-36, Math.min(36, nx - pointerX));
         pointerVY = Math.max(-36, Math.min(36, ny - pointerY));
@@ -249,17 +254,48 @@ export function TaglineSection() {
     };
 
     const update = () => {
-      targetProgress = reduced.matches ? 0.5 : readProgress();
+      const nextTarget = reduced.matches ? 0.5 : readProgress();
       if (reduced.matches) {
         cancelAnimationFrame(raf);
         raf = 0;
-        currentProgress = targetProgress;
-        render(currentProgress);
-      } else if (!raf) {
-        lastTime = 0;
-        raf = requestAnimationFrame(tick);
+        if (currentProgress !== nextTarget) {
+          targetProgress = currentProgress = nextTarget;
+          render(currentProgress);
+        }
+        return;
+      }
+      targetProgress = nextTarget;
+      if (!visible) return;
+      if (Math.abs(targetProgress - currentProgress) > 0.0001 || hasGlyphMotion()) {
+        wake();
       }
     };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        section.dataset.visible = String(visible);
+        if (visible) {
+          const stageRect = stage.getBoundingClientRect();
+          stageLeft = stageRect.left;
+          stageTop = stageRect.top;
+          targetProgress = reduced.matches ? 0.5 : readProgress();
+          if (Math.abs(targetProgress - currentProgress) > 0.0001) {
+            render(currentProgress);
+          }
+          wake();
+        } else {
+          cancelAnimationFrame(raf);
+          raf = 0;
+          lastTime = 0;
+          pointerActive = false;
+          pointerVX = 0;
+          pointerVY = 0;
+        }
+      },
+      { root: scroller, rootMargin: "150px 0px" }
+    );
+    observer.observe(section);
 
     const resize = new ResizeObserver(measure);
     resize.observe(section);
@@ -267,19 +303,22 @@ export function TaglineSection() {
     resize.observe(title);
     const overlays = new MutationObserver(syncFooterAccess);
     overlays.observe(document.documentElement, {
-      attributes: true, attributeFilter: ["data-projects-progress", "data-static-progress"],
+      attributes: true,
+      attributeFilter: ["data-overlay-open", "data-projects-active", "data-static-section"],
     });
     scroller.addEventListener("scroll", update, { passive: true });
     stage.addEventListener("pointermove", onPointerMove, { passive: true });
     stage.addEventListener("pointerdown", onPointerMove, { passive: true });
     stage.addEventListener("pointerleave", onPointerLeave, { passive: true });
     reduced.addEventListener("change", measure);
+    document.addEventListener("visibilitychange", wake);
     document.fonts.ready.then(() => { if (!disposed) measure(); });
     measure();
 
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
+      observer.disconnect();
       resize.disconnect();
       overlays.disconnect();
       scroller.removeEventListener("scroll", update);
@@ -287,6 +326,7 @@ export function TaglineSection() {
       stage.removeEventListener("pointerdown", onPointerMove);
       stage.removeEventListener("pointerleave", onPointerLeave);
       reduced.removeEventListener("change", measure);
+      document.removeEventListener("visibilitychange", wake);
       wordmarkEffect.dispose();
       delete document.documentElement.dataset.footerActive;
     };

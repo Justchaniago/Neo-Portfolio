@@ -3,9 +3,11 @@ import { SplashScreen } from "@/components/splash-screen/SplashScreen";
 import { Header } from "@/components/header/Header";
 import { CustomCursor } from "@/components/cursor/CustomCursor";
 import { SpatialHud } from "@/components/hud/SpatialHud";
+import { CommandPalette } from "@/components/command/CommandPalette";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://chaniago.me"),
   title: "chaniago.me — Creative Software Engineer",
   description: "Portfolio of Chaniago — Freelance Software Engineer, Creative Developer, and Systems Architect based in Surabaya, Indonesia.",
 };
@@ -23,6 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="h-full flex flex-col">
         <SplashScreen />
         <CustomCursor />
+        <CommandPalette />
         <div data-page-content className="flex flex-1 flex-col h-full w-full relative overflow-hidden">
           <Header />
           <SpatialHud />

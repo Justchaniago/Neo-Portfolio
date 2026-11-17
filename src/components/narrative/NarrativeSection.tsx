@@ -23,7 +23,7 @@ const clamp = (v: number) => Math.max(0, Math.min(1, v));
 const phase = (p: number, a: number, b: number) => clamp((p - a) / (b - a));
 const ease = (v: number) => v * v * (3 - 2 * v);
 const READING_START = 0.08;
-const READING_END = 0.91;
+const READING_END = 0.74;
 const LOCK_SOURCE = "narrative-reading";
 
 export function NarrativeSection() {
@@ -31,6 +31,8 @@ export function NarrativeSection() {
   const stage = useRef<HTMLDivElement>(null);
   const copyRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
+  const hudFillRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const element = section.current, visual = stage.current, copy = copyRef.current, canvas = canvasRef.current;
@@ -52,9 +54,13 @@ export function NarrativeSection() {
     let taglineProgress = 0;
     let direction = 1, smoothDirection = 1;
     let inputDistance = 0, inputVelocity = 0, touchY: number | null = null;
+    let copyHidden = false;
     const externalLocks = new Set<string>();
 
     const setReadingLock = (locked: boolean) => {
+      if (hudRef.current) {
+        hudRef.current.dataset.active = String(locked);
+      }
       window.dispatchEvent(new CustomEvent("portfolio:scroll-lock", { detail: { source: LOCK_SOURCE, locked } }));
     };
     const finishReading = (destination?: number) => {
@@ -73,9 +79,9 @@ export function NarrativeSection() {
       if (!visible || document.hidden || disposed || reduced.matches) { last = 0; return; }
       const dt = Math.min(0.05, Math.max(0.001, (time - (last || time - 16.67)) / 1000));
       last = time;
-      const step = (target - current) * (1 - Math.exp(-dt / 0.075));
-      current += reading ? Math.max(-dt * 0.2, Math.min(dt * 0.2, step)) : step;
-      if (Math.abs(target - current) < 0.00001) current = target;
+      const step = (target - current) * (1 - Math.exp(-dt / 0.062));
+      current += reading ? Math.max(-dt * 0.3, Math.min(dt * 0.3, step)) : step;
+      if (Math.abs(target - current) < 0.0001) current = target;
       // Viewports/second makes the response consistent across section lengths.
       // Ease into acceleration, then coast back to idle more slowly.
       const scrollVelocity = Math.abs(current - previous) * travel / height / dt;
@@ -90,66 +96,96 @@ export function NarrativeSection() {
       smoothDirection += (direction - smoothDirection) * (1 - Math.exp(-dt / 0.12));
       const p = current;
       // The burst follows scroll velocity; the caption trails on its own, calmer track.
-      taglineProgress += (p - taglineProgress) * (1 - Math.exp(-dt / 0.42));
+      taglineProgress += (p - taglineProgress) * (1 - Math.exp(-dt / 0.22));
       visual.style.setProperty("--stage-entry", String(ease(phase(p, 0, 0.04))));
       const entrance = ease(phase(p, 0, 0.075));
       const rise = (1 - entrance) * height * 0.28;
-      copy.style.opacity = String(entrance);
-      copy.style.transform = "translate3d(0," + rise + "px,0) scale(" + (0.96 + entrance * 0.04) + ")";
       // Hold the fully revealed copy briefly before sending each word off-canvas.
       const scatter = phase(p, 0.16, 0.38);
-      const factor = Math.pow(scatter, 1.3) * 3.4;
-      const scale = Math.min(1, width / 1000, height / 650);
-      const recall = Math.min(1, Math.pow(scatter, 1.2) * 1.6);
-      const exitBlend = ease(scatter);
       const wordFade = 1 - ease(phase(scatter, 0.72, 0.98));
-      for (const word of words) {
-        const dx = word.cx + word.tx - mx, dy = word.cy + rise + word.ty - my;
-        const distance = Math.hypot(dx, dy);
-        if (finePointer.matches && scatter > 0.03 && distance > 0.1 && distance < 175) {
-          const proximity = 1 - distance / 175;
-          word.vx += (dx / distance * proximity ** 2 * 10 + mouseVX * proximity * 0.48) * dt * 60;
-          word.vy += (dy / distance * proximity ** 2 * 10 + mouseVY * proximity * 0.48) * dt * 60;
+      let hasWordMotion = false;
+
+      if (wordFade <= 0.001 && scatter >= 0.999) {
+        if (!copyHidden) {
+          copyHidden = true;
+          copy.style.opacity = "0";
+          copy.style.visibility = "hidden";
         }
-        word.vx *= Math.pow(0.92, dt * 60); word.vy *= Math.pow(0.92, dt * 60);
-        word.x = Math.max(-500, Math.min(500, word.x + word.vx * dt * 60));
-        word.y = Math.max(-400, Math.min(400, word.y + word.vy * dt * 60));
-        if (scatter <= 0.001) word.x = word.y = word.vx = word.vy = 0;
-        word.tx = word.dx * factor * scale * (1 - exitBlend) + word.exitX * exitBlend + word.x * recall * (1 - scatter);
-        word.ty = word.dy * factor * scale * (1 - exitBlend) + word.exitY * exitBlend + word.y * recall * (1 - scatter);
-        word.el.style.opacity = String(wordFade);
-        word.el.style.transform = "translate3d(" + word.tx + "px," + word.ty + "px,0) rotate(" + (word.rot * factor * (1 - exitBlend) + word.x * recall * (1 - scatter) * 0.04) + "deg)";
+      } else {
+        if (copyHidden) {
+          copyHidden = false;
+          copy.style.visibility = "visible";
+        }
+        copy.style.opacity = String(entrance);
+        copy.style.transform = "translate3d(0," + rise + "px,0) scale(" + (0.96 + entrance * 0.04) + ")";
+        const factor = Math.pow(scatter, 1.3) * 3.4;
+        const scale = Math.min(1, width / 1000, height / 650);
+        const recall = Math.min(1, Math.pow(scatter, 1.2) * 1.6);
+        const exitBlend = ease(scatter);
+        for (const word of words) {
+          const dx = word.cx + word.tx - mx, dy = word.cy + rise + word.ty - my;
+          const distance = Math.hypot(dx, dy);
+          if (finePointer.matches && scatter > 0.03 && distance > 0.1 && distance < 175) {
+            const proximity = 1 - distance / 175;
+            word.vx += (dx / distance * proximity ** 2 * 10 + mouseVX * proximity * 0.48) * dt * 60;
+            word.vy += (dy / distance * proximity ** 2 * 10 + mouseVY * proximity * 0.48) * dt * 60;
+          }
+          word.vx *= Math.pow(0.92, dt * 60); word.vy *= Math.pow(0.92, dt * 60);
+          word.x = Math.max(-500, Math.min(500, word.x + word.vx * dt * 60));
+          word.y = Math.max(-400, Math.min(400, word.y + word.vy * dt * 60));
+          if (scatter <= 0.001) word.x = word.y = word.vx = word.vy = 0;
+          if (Math.abs(word.vx) > 0.02 || Math.abs(word.vy) > 0.02) hasWordMotion = true;
+          word.tx = word.dx * factor * scale * (1 - exitBlend) + word.exitX * exitBlend + word.x * recall * (1 - scatter);
+          word.ty = word.dy * factor * scale * (1 - exitBlend) + word.exitY * exitBlend + word.y * recall * (1 - scatter);
+          word.el.style.opacity = String(wordFade);
+          word.el.style.transform = "translate3d(" + word.tx + "px," + word.ty + "px,0) rotate(" + (word.rot * factor * (1 - exitBlend) + word.x * recall * (1 - scatter) * 0.04) + "deg)";
+        }
       }
       mouseVX *= Math.pow(0.85, dt * 60); mouseVY *= Math.pow(0.85, dt * 60);
-      const reveal = ease(phase(p, 0.32, 0.50));
-      const burstExit = ease(phase(taglineProgress, 0.76, 0.88));
-      const intensity = reveal * (1 - ease(phase(taglineProgress, 0.86, 0.90)));
-      burst.draw(dt, intensity, speed, smoothDirection, reveal, burstExit);
+      const reveal = ease(phase(p, 0.30, 0.46));
+      const burstExit = ease(phase(taglineProgress, 0.66, 0.80));
+      const intensity = reveal * (1 - ease(phase(taglineProgress, 0.74, 0.84)));
+      const portalProgress = clamp((p - 0.72) / (0.95 - 0.72));
+
+      burst.draw(dt, intensity, speed, smoothDirection, reveal, burstExit, portalProgress);
+
       captions.forEach(caption => {
-        const enter = ease(phase(taglineProgress, 0.44, 0.54));
-        const leave = ease(phase(taglineProgress, 0.74, 0.84));
+        const enter = ease(phase(taglineProgress, 0.40, 0.50));
+        const leave = ease(phase(taglineProgress, 0.64, 0.75));
         const visibilityAlpha = enter * (1 - leave);
+        // Scale up past the viewer (1.0 -> 1.22) as if the camera is flying forward through the tagline into the portal
+        const depthScale = 0.95 + enter * 0.05 + leave * leave * 0.22;
         caption.style.opacity = String(visibilityAlpha);
-        caption.style.transform = "translate3d(0," + ((1 - enter) * 22 - leave * 16) + "px,0) scale(" + (0.96 + enter * 0.04 + leave * 0.03) + ")";
+        caption.style.transform = `translate3d(0, ${((1 - enter) * 22 - leave * 26).toFixed(1)}px, 0) scale(${depthScale.toFixed(3)})`;
       });
-      const portalProgress = ease(phase(p, 0.84, 0.985));
-      visual.style.setProperty("--window-progress", String(portalProgress));
-      // Reveal the overlapping globe as the portal finishes covering the screen.
-      visual.style.opacity = String(1 - ease(phase(p, 0.97, 0.998)));
-      visual.style.pointerEvents = p >= 0.97 ? "none" : "auto";
-      const leavingReading = (direction < 0 && target <= READING_START) || (direction > 0 && target >= READING_END);
-      const captionCleared = direction > 0 ? taglineProgress >= 0.89 : taglineProgress <= READING_START + 0.01;
-      if (reading && Math.abs(current - target) < 0.00001 && leavingReading && captionCleared) {
-        readingDone = target >= READING_END;
+
+      if (hudFillRef.current) {
+        const readNorm = clamp((p - READING_START) / (READING_END - READING_START));
+        hudFillRef.current.style.transform = `scaleX(${readNorm.toFixed(4)})`;
+      }
+      if (hudRef.current) {
+        hudRef.current.dataset.active = String(reading && p < 0.72);
+      }
+      // Once the 3D portal opening has expanded beyond the viewport corners, fade out any remaining stage wrapper.
+      const stageFade = 1 - ease(phase(p, 0.93, 0.98));
+      visual.style.opacity = String(stageFade);
+      visual.style.pointerEvents = p >= 0.86 ? "none" : "auto";
+      const leavingForward = direction > 0 && target >= READING_END && current >= READING_END - 0.012 && taglineProgress >= 0.69;
+      const leavingReverse = direction < 0 && target <= READING_START && current <= READING_START + 0.012;
+      if (reading && (leavingForward || leavingReverse)) {
+        readingDone = leavingForward;
         finishReading(current);
       }
-      if (intensity > 0 || p < 0.53 || current !== target || speed > 0.001 || Math.abs(taglineProgress - p) > 0.001) raf = requestAnimationFrame(render);
+      if (intensity > 0 || (portalProgress > 0 && portalProgress < 1) || hasWordMotion || current !== target || speed > 0.001 || Math.abs(taglineProgress - p) > 0.002) {
+        raf = requestAnimationFrame(render);
+      }
     };
     const wake = () => { if (!raf && visible && !reduced.matches && !document.hidden && !disposed) raf = requestAnimationFrame(render); };
     const scroll = () => {
       if (reading) { wake(); return; }
       const oldTarget = target;
-      target = clamp((scroller.scrollTop - top) / travel);
+      const nextTarget = clamp((scroller.scrollTop - top) / travel);
+      target = nextTarget;
       if (scroller.scrollTop <= 16) bypassReading = false;
       if (!reading && target < 0.3 && !bypassReading) readingDone = false;
       const enteringForward = !readingDone && !bypassReading && oldTarget < READING_START && target >= READING_START;
@@ -161,8 +197,12 @@ export function NarrativeSection() {
         taglineProgress = current;
         setReadingLock(true);
         scroller.scrollTop = top + travel * current;
+        wake();
+        return;
       }
-      wake();
+      if (Math.abs(target - current) > 0.00005 || Math.abs(target - oldTarget) > 0.00005) {
+        wake();
+      }
     };
     const measure = () => {
       if (disposed) return;
@@ -188,20 +228,10 @@ export function NarrativeSection() {
         word.exitX = ux * exitDistance;
         word.exitY = uy * exitDistance;
       });
-      const isMobile = width < 768;
-      const archW = isMobile
-        ? Math.min(196, Math.max(150, width * 0.42))
-        : Math.min(240, Math.max(136, width * 0.22));
-      const archH = archW * (isMobile ? 1.22 : 1.24);
-      // Scale uniformly enough on both axes so the arch keeps its doorway silhouette while expanding
-      const targetScaleX = (width / archW) * 1.45;
-      const targetScaleY = (height / archH) * 1.38;
-      const unifiedScale = Math.max(targetScaleX, targetScaleY);
-      visual.style.setProperty("--portal-scale-x", String(unifiedScale));
-      visual.style.setProperty("--portal-scale-y", String(unifiedScale));
       burst.resize(width, height);
       if (reading) scroller.scrollTop = top + travel * current;
       scroll();
+      wake();
     };
     const pointer = (event: PointerEvent) => {
       if (event.pointerType !== "mouse") return;
@@ -252,7 +282,8 @@ export function NarrativeSection() {
     const visibility = () => { last = 0; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else wake(); };
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
-      if (visible) { last = 0; scroll(); } else { cancelAnimationFrame(raf); raf = 0; last = 0; }
+      element.dataset.visible = String(visible);
+      if (visible) { last = 0; wake(); scroll(); } else { cancelAnimationFrame(raf); raf = 0; last = 0; }
     }, { root: scroller });
     observer.observe(element);
     const resize = new ResizeObserver(measure);
@@ -311,7 +342,21 @@ export function NarrativeSection() {
         <div className={styles.taglines}>
           <p data-tagline className={styles.tagline}>{tagline}</p>
         </div>
-        <div className={styles.window} aria-hidden="true" />
+        <div ref={hudRef} className={styles.readingHud} data-active="false" aria-hidden="true">
+          <span className={styles.readingTrack}>
+            <span ref={hudFillRef} className={styles.readingFill} />
+          </span>
+          <button
+            type="button"
+            tabIndex={-1}
+            className={styles.readingSkip}
+            onClick={() => {
+              window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+            }}
+          >
+            ESC TO SKIP
+          </button>
+        </div>
       </div>
     </section>
   );

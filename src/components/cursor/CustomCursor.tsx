@@ -34,6 +34,7 @@ export function CustomCursor() {
     let ringX = -100;
     let ringY = -100;
     let raf = 0;
+    let lastTarget: EventTarget | null = null;
 
     const setMode = (nextMode: CursorMode, nextLabel = "") => {
       if (mode === nextMode && labelText === nextLabel) return;
@@ -136,8 +137,11 @@ export function CustomCursor() {
         dotY = ringY = mouseY;
         root.dataset.visible = "true";
       }
-      const [nextMode, nextLabel] = resolveTargetMode(event.target);
-      setMode(nextMode, nextLabel);
+      if (event.target !== lastTarget) {
+        lastTarget = event.target;
+        const [nextMode, nextLabel] = resolveTargetMode(event.target);
+        setMode(nextMode, nextLabel);
+      }
       wake();
     };
 

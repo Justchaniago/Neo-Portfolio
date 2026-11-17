@@ -26,6 +26,8 @@ export function HeaderNav() {
     let previousScrollTop = scroller.scrollTop;
     let hasMeasured = false;
     let collapsed = false;
+    let currentActiveSection = "hero";
+    let isScrollerScrollable = scroller.scrollHeight > scroller.clientHeight + 1;
 
     const getSection = () => {
       const staticSec = document.documentElement.dataset.staticSection;
@@ -37,9 +39,10 @@ export function HeaderNav() {
       const currentScrollTop = scroller.scrollTop;
       const section = getSection();
       const layerActive = section !== "hero"
+        || document.documentElement.dataset.overlayOpen === "true"
         || Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001
         || Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001;
-      const sectionScrollable = !layerActive && scroller.scrollHeight > scroller.clientHeight + 1;
+      const sectionScrollable = !layerActive && isScrollerScrollable;
       const threshold = mobile.matches ? 24 : 40;
       const delta = currentScrollTop - previousScrollTop;
       const movingDown = delta > 2;
@@ -58,7 +61,10 @@ export function HeaderNav() {
 
       previousScrollTop = currentScrollTop;
       hasMeasured = true;
-      setActiveSection(section);
+      if (section !== currentActiveSection) {
+        currentActiveSection = section;
+        setActiveSection(section);
+      }
 
       const baseTitle = "chaniago.me — Creative Software Engineer";
       const nextTitle =
@@ -81,16 +87,24 @@ export function HeaderNav() {
       }
     };
 
-    const initialFrame = requestAnimationFrame(update);
+    const measureAndUpdate = () => {
+      isScrollerScrollable = scroller.scrollHeight > scroller.clientHeight + 1;
+      update();
+    };
+
+    const initialFrame = requestAnimationFrame(measureAndUpdate);
     scroller.addEventListener("scroll", update, { passive: true });
     const stateObserver = new MutationObserver(update);
     stateObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-projects-active", "data-projects-progress", "data-static-section", "data-static-progress"],
+      attributeFilter: ["data-projects-active", "data-static-section", "data-overlay-open"],
     });
-    mobile.addEventListener("change", update);
-    const resizeObserver = new ResizeObserver(update);
+    mobile.addEventListener("change", measureAndUpdate);
+    const resizeObserver = new ResizeObserver(measureAndUpdate);
     resizeObserver.observe(scroller);
+    if (scroller.firstElementChild) {
+      resizeObserver.observe(scroller.firstElementChild);
+    }
     const linkElements = links.current.slice();
 
     return () => {
@@ -98,7 +112,7 @@ export function HeaderNav() {
       scroller.removeEventListener("scroll", update);
       stateObserver.disconnect();
       resizeObserver.disconnect();
-      mobile.removeEventListener("change", update);
+      mobile.removeEventListener("change", measureAndUpdate);
       linkElements.forEach((link) => {
         if (link) gsap.killTweensOf(link);
       });

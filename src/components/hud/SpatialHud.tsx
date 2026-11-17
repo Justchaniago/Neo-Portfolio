@@ -19,10 +19,15 @@ export function SpatialHud() {
     if (!scroller) return;
 
     let raf = 0;
+    let maxScroll = Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+    let lastChapter = 0;
+
+    const measure = () => {
+      maxScroll = Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+    };
 
     const sync = () => {
       raf = 0;
-      const maxScroll = Math.max(1, scroller.scrollHeight - scroller.clientHeight);
       const progress = Math.max(0, Math.min(1, scroller.scrollTop / maxScroll));
       if (fillRef.current) {
         fillRef.current.style.transform = `scaleY(${progress.toFixed(4)})`;
@@ -30,21 +35,33 @@ export function SpatialHud() {
 
       const nextChapter =
         progress < 0.14 ? 0 : progress < 0.48 ? 1 : progress < 0.78 ? 2 : 3;
-      setChapterIndex(nextChapter);
+      if (nextChapter !== lastChapter) {
+        lastChapter = nextChapter;
+        setChapterIndex(nextChapter);
+      }
     };
 
     const scheduleSync = () => {
       if (!raf) raf = requestAnimationFrame(sync);
     };
 
+    const resizeObserver = new ResizeObserver(() => {
+      measure();
+      scheduleSync();
+    });
+    resizeObserver.observe(scroller);
+    if (scroller.firstElementChild) {
+      resizeObserver.observe(scroller.firstElementChild);
+    }
+
+    measure();
     sync();
     scroller.addEventListener("scroll", scheduleSync, { passive: true });
-    window.addEventListener("resize", scheduleSync, { passive: true });
 
     return () => {
       if (raf) cancelAnimationFrame(raf);
+      resizeObserver.disconnect();
       scroller.removeEventListener("scroll", scheduleSync);
-      window.removeEventListener("resize", scheduleSync);
     };
   }, []);
 

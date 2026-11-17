@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import gsap from "gsap";
+import { getPerformanceProfile } from "@/lib/performanceTier";
 import styles from "./HeroPortrait.module.css";
 
 export function HeroPortrait() {
@@ -72,7 +73,7 @@ export function HeroPortrait() {
         const rect = portrait.getBoundingClientRect();
         const width = Math.max(1, Math.round(rect.width));
         const height = Math.max(1, Math.round(rect.height));
-        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, getPerformanceProfile().maxCanvasDpr);
         surface.width = Math.round(width * pixelRatio);
         surface.height = Math.round(height * pixelRatio);
         const context = surface.getContext("2d");
@@ -330,11 +331,13 @@ export function HeroPortrait() {
   useEffect(() => {
     const element = root.current;
     if (!element) return;
-    const isProjectsVisible = () => Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001;
+    const isOverlayVisible = () =>
+      document.documentElement.dataset.overlayOpen === "true" ||
+      Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001;
     const isHeroScrolling = () => document.documentElement.dataset.heroScrolling === "true";
     const syncHover = () => {
       const point = lastMouse.current;
-      if (!point || isProjectsVisible() || isHeroScrolling()) {
+      if (!point || isOverlayVisible() || isHeroScrolling()) {
         bounds.current = null;
         if (revealedRef.current) {
           revealedRef.current = false;
@@ -369,10 +372,9 @@ export function HeroPortrait() {
     const onPointerMove = (event: globalThis.PointerEvent) => {
       if (event.pointerType !== "mouse") return;
       lastMouse.current = { x: event.clientX, y: event.clientY };
-      queueSync();
     };
     const observer = new MutationObserver(() => {
-      if (isProjectsVisible() || isHeroScrolling()) {
+      if (isOverlayVisible() || isHeroScrolling()) {
         if (revealedRef.current) {
           revealedRef.current = false;
           setRevealed(false);
@@ -382,7 +384,10 @@ export function HeroPortrait() {
       queueSync();
     });
     window.addEventListener("pointermove", onPointerMove, { passive: true });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-projects-progress", "data-hero-scrolling"] });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-overlay-open", "data-projects-active", "data-hero-scrolling"],
+    });
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
       observer.disconnect();

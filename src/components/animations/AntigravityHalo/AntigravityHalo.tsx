@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { getPerformanceProfile, onPerformanceTierChange } from "@/lib/performanceTier";
 import { generatePoissonDisc } from "./poissonDisc";
 import { VERTEX_SHADER, FRAGMENT_SHADER } from "./shaders";
 
@@ -41,25 +42,36 @@ export function AntigravityHalo({
     const container = containerRef.current;
     if (!container) return;
 
-    // Check reduced motion
+    // Check reduced motion & adaptive performance profile
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let prefersReducedMotion = reducedMotion.matches;
+    let perfProfile = getPerformanceProfile();
 
     // Dimensions
     let width = container.clientWidth || window.innerWidth;
     let height = container.clientHeight || window.innerHeight;
+    let rectLeft = 0;
+    let rectTop = 0;
+    const syncRect = () => {
+      const rect = container.getBoundingClientRect();
+      rectLeft = rect.left;
+      rectTop = rect.top;
+    };
+    syncRect();
 
     // Three.js Scene Setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
     camera.position.z = 3.1;
+    const HALF_PLANE_HEIGHT = 3.1 * Math.tan((40 * Math.PI) / 360);
 
     // WebGL Renderer with graceful fallback
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({
-        antialias: true,
+        antialias: perfProfile.haloAntialias,
         alpha: true,
+        depth: false,
         powerPreference: "high-performance",
         preserveDrawingBuffer: false,
         stencil: false,
@@ -69,7 +81,7 @@ export function AntigravityHalo({
       return;
     }
 
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    let pixelRatio = Math.min(window.devicePixelRatio || 1, perfProfile.maxWebglDpr);
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
     renderer.setClearColor(0xffffff, 0); // Transparent background
@@ -82,8 +94,9 @@ export function AntigravityHalo({
     canvas.style.pointerEvents = "none";
     container.appendChild(canvas);
 
-    // Generate Poisson Disc Points across entire plane
-    const mappedMinDist = 9.5 - (density / 300) * 5.5; // ~4.5 - 5.5
+    // Generate Poisson Disc Points across entire plane (scaled by device capability tier)
+    const effectiveDensity = density * perfProfile.haloDensityScale;
+    const mappedMinDist = 9.5 - (effectiveDensity / 300) * 5.5; // ~4.5 - 5.5
     const pointsData = generatePoissonDisc(500, 500, Math.max(3.2, mappedMinDist), 20);
     const count = pointsData.length / 2;
 
@@ -163,39 +176,25 @@ export function AntigravityHalo({
     pointsMesh.scale.set(5.0, 5.0, 5.0);
     scene.add(pointsMesh);
 
-    // Raycast Plane in world space for accurate pointer intersection
-    const raycastPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(25, 25),
-      new THREE.MeshBasicMaterial({ visible: false })
-    );
-    scene.add(raycastPlane);
-
-    const raycaster = new THREE.Raycaster();
-    const ndcMouse = new THREE.Vector2(-999, -999);
     const ringPos = new THREE.Vector2(0.0, 0.06);
     const targetCursorPos = new THREE.Vector2(0.0, 0.06);
 
     let isMouseActive = false;
     let isIntersecting = false;
 
-    // Pointer event handlers - continuous tracking across the full window
+    // Pointer event handlers - zero layout reflows or raycasts in pointermove
     const updatePointerFromClient = (clientX: number, clientY: number) => {
-      if (prefersReducedMotion || !isVisible || document.hidden) return;
-      const rect = container.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
+      if (prefersReducedMotion || !isVisible || document.hidden || width === 0 || height === 0) return;
       isMouseActive = true;
-      ndcMouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-      ndcMouse.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
+      const ndcX = ((clientX - rectLeft) / width) * 2 - 1;
+      const ndcY = -(((clientY - rectTop) / height) * 2 - 1);
 
-      raycaster.setFromCamera(ndcMouse, camera);
-      const intersects = raycaster.intersectObject(raycastPlane);
-      if (intersects.length > 0) {
-        // Since pointsMesh is scaled by 5.0, dividing world coordinates by 5.0 (* 0.2)
-        // precisely maps the pointer to local mesh coordinate space!
-        targetCursorPos.x = intersects[0].point.x * 0.2;
-        targetCursorPos.y = intersects[0].point.y * 0.2;
-        isIntersecting = true;
-      }
+      // Direct analytical intersection with z = 0 plane (scaled by 0.2 for 5.0x mesh scale)
+      const worldY = ndcY * HALF_PLANE_HEIGHT;
+      const worldX = ndcX * HALF_PLANE_HEIGHT * (width / height);
+      targetCursorPos.x = worldX * 0.2;
+      targetCursorPos.y = worldY * 0.2;
+      isIntersecting = true;
     };
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -234,11 +233,17 @@ export function AntigravityHalo({
     const leaveTarget = pointerScope === "local" ? pointerTarget : container;
     leaveTarget.addEventListener("pointerleave", handlePointerLeave);
 
+    const scroller = container.closest("main");
+    if (scroller) {
+      scroller.addEventListener("scroll", syncRect, { passive: true });
+    }
+
     // Responsive Resize
     const handleResize = () => {
       if (!container) return;
       width = container.clientWidth || window.innerWidth;
       height = container.clientHeight || window.innerHeight;
+      syncRect();
 
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
@@ -258,11 +263,13 @@ export function AntigravityHalo({
 
     // Intersection Observer to stop animation when out of view
     let isVisible = false;
+    let hasRenderedInitial = false;
     const intersectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           isVisible = entry.isIntersecting;
-          if (!isVisible) isMouseActive = false;
+          if (isVisible) syncRect();
+          else isMouseActive = false;
           syncAnimation();
         });
       },
@@ -278,6 +285,13 @@ export function AntigravityHalo({
         ? performance.now()
         : null;
 
+    const isOccluded = () => {
+      if (pointerScope !== "window") return false;
+      if (document.documentElement.dataset.overlaySettled === "true") return true;
+      if (document.documentElement.dataset.splashComplete !== "true" && hasRenderedInitial) return true;
+      return false;
+    };
+
     const splashObserver = new MutationObserver(() => {
       if (
         pointerScope === "window" &&
@@ -288,17 +302,31 @@ export function AntigravityHalo({
         shockwaveStart = performance.now();
         ringPos.set(0.0, 0.04);
       }
+      syncAnimation();
     });
     if (pointerScope === "window") {
       splashObserver.observe(document.documentElement, {
         attributes: true,
-        attributeFilter: ["data-splash-complete"],
+        attributeFilter: ["data-splash-complete", "data-overlay-settled"],
       });
     }
 
+    const unsubscribePerf = onPerformanceTierChange((nextProfile) => {
+      perfProfile = nextProfile;
+      const nextDpr = Math.min(window.devicePixelRatio || 1, perfProfile.maxWebglDpr);
+      if (Math.abs(nextDpr - pixelRatio) > 0.01) {
+        pixelRatio = nextDpr;
+        renderer.setPixelRatio(pixelRatio);
+        renderer.setSize(width, height);
+        uniforms.uPixelRatio.value = pixelRatio;
+        uniforms.uParticleScale.value = calculateParticleScale(width);
+      }
+    });
+
     const animate = () => {
       animFrameId = 0;
-      if (!isVisible || document.hidden) return;
+      if (!isVisible || document.hidden || isOccluded()) return;
+      hasRenderedInitial = true;
 
       const now = performance.now();
       const elapsedTime = prefersReducedMotion ? 1.0 : (now - startTime) * 0.001;
@@ -403,7 +431,9 @@ export function AntigravityHalo({
       uniforms.uRingPos.value.copy(ringPos);
 
       renderer.render(scene, camera);
-      if (!prefersReducedMotion) animFrameId = requestAnimationFrame(animate);
+      if (!prefersReducedMotion && !isOccluded()) {
+        animFrameId = requestAnimationFrame(animate);
+      }
     };
 
     const syncAnimation = () => {
@@ -418,7 +448,9 @@ export function AntigravityHalo({
         uniforms.uRingWidth2.value = getBaseRingWidth2();
         uniforms.uRingDisplacement.value = getBaseRingDisplacement();
       }
-      if (isVisible && !document.hidden) animFrameId = requestAnimationFrame(animate);
+      if (isVisible && !document.hidden && !isOccluded()) {
+        animFrameId = requestAnimationFrame(animate);
+      }
     };
     document.addEventListener("visibilitychange", syncAnimation);
     reducedMotion.addEventListener("change", syncAnimation);
@@ -426,7 +458,11 @@ export function AntigravityHalo({
     // Cleanup
     return () => {
       cancelAnimationFrame(animFrameId);
+      unsubscribePerf();
       splashObserver.disconnect();
+      if (scroller) {
+        scroller.removeEventListener("scroll", syncRect);
+      }
       pointerTarget.removeEventListener("pointermove", handlePointerMove as EventListener);
       pointerTarget.removeEventListener("touchstart", handleTouchStart as EventListener);
       pointerTarget.removeEventListener("touchmove", handleTouchMove as EventListener);
@@ -440,8 +476,6 @@ export function AntigravityHalo({
 
       geometry.dispose();
       material.dispose();
-      raycastPlane.geometry.dispose();
-      (raycastPlane.material as THREE.Material).dispose();
       renderer.dispose();
 
       if (canvas.parentElement) {

@@ -1,8 +1,11 @@
 .container {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   z-index: 90;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: none;
   mix-blend-mode: difference;
 }
