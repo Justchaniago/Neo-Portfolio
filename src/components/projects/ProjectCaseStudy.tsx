@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import Lenis from "lenis";
 import { PROJECT_COUNT, type ProjectItem } from "@/lib/projects";
+import { projectPosters } from "@/lib/projectPosters";
 import { getPerformanceProfile } from "@/lib/performanceTier";
 import { pageMotion } from "@/lib/pageMotion";
 import { triggerRouteTransition } from "./ProjectTransition";
@@ -19,16 +20,17 @@ type Props = {
   project: ProjectItem;
   prevProject: ProjectItem;
   nextProject: ProjectItem;
+  onSelect?: (slug: string) => void;
 };
 
-export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
+export function ProjectCaseStudy({ project, prevProject, nextProject, onSelect }: Props) {
   const router = useRouter();
   const scrollerRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  const backHref = `/projects#${project.slug}`;
+  const backHref = `/?section=project&project=${project.slug}`;
   const prevHref = `/projects/${prevProject.slug}`;
   const nextHref = `/projects/${nextProject.slug}`;
 
@@ -47,6 +49,12 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
         }
         event.preventDefault();
       }
+      if (onSelect) {
+        if (href === "/?section=contact") {
+          window.dispatchEvent(new CustomEvent("portfolio:request-section", { detail: { section: "contact" } }));
+        } else onSelect(href === backHref ? "" : href.split("/").pop()!);
+        return;
+      }
       triggerRouteTransition({
         href,
         label,
@@ -54,7 +62,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
         navigate: () => router.push(href),
       });
     },
-    [router],
+    [backHref, onSelect, router],
   );
 
   // Smooth scroll (Lenis on high/medium tier), scroll-lock integration, & top reading progress bar
@@ -190,6 +198,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
     let splashObserver: MutationObserver | null = null;
 
     const playEntrance = () => {
+      if (onSelect) return;
       if (reduced) {
         gsap.set(heroParts, { clearProps: "all" });
         if (titleEl) titleEl.style.fontVariationSettings = '"wdth" 100';
@@ -222,7 +231,11 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
       }
     };
 
-    if (!reduced) {
+    if (onSelect && titleEl) {
+      titleEl.tabIndex = -1;
+      titleEl.focus({ preventScroll: true });
+    }
+    if (!reduced && !onSelect) {
       gsap.set(heroParts, { autoAlpha: 0, y: pageMotion.lift });
     }
 
@@ -292,7 +305,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
 
     window.addEventListener("portfolio:route-exit", onRouteExit);
     window.addEventListener("portfolio:route-enter", resetExit);
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, !!onSelect);
 
     return () => {
       splashObserver?.disconnect();
@@ -302,18 +315,21 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
       io?.disconnect();
       window.removeEventListener("portfolio:route-exit", onRouteExit);
       window.removeEventListener("portfolio:route-enter", resetExit);
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, !!onSelect);
     };
-  }, [backHref, goWithTransition, project.accent, project.slug]);
+  }, [backHref, goWithTransition, onSelect, project]);
 
+  const poster = projectPosters[project.slug], following = projectPosters[nextProject.slug];
   const accentStyle = {
-    "--project-accent": project.accent,
+    "--study-paper": poster.paper, "--study-ink": poster.ink,
+    "--project-accent": poster.paper === "#ffffff" ? "#a64214" : "#ffb37a",
     "--project-accent-soft": project.accentSoft,
-    "--next-accent": nextProject.accent,
+    "--next-accent": "#c4551b",
   } as CSSProperties;
 
+  const Surface = onSelect ? "section" : "main";
   return (
-    <main ref={scrollerRef} className={styles.page} style={accentStyle}
+    <Surface ref={scrollerRef} className={styles.page} style={accentStyle} data-lenis-prevent={onSelect ? "" : undefined}
       data-project-case-study={project.slug} data-retail-edition={project.retail ? true : undefined}>
       <div className={styles.progressTrack} aria-hidden="true">
         <div ref={progressRef} className={styles.progressBar} />
@@ -321,6 +337,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
 
       <div ref={contentRef} className={styles.scrollContent}>
         <article className={styles.caseStudy}>
+          <header className={styles.jacket}>
           <div className={styles.topBar} data-case-hero>
             <Link
               href={backHref}
@@ -331,7 +348,6 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
             >
               <span className={styles.backArrow} aria-hidden="true">←</span>
               <span>All projects</span>
-              <kbd className={styles.escHint} aria-hidden="true">ESC</kbd>
             </Link>
 
             <div className={styles.switcher} aria-label="Switch project">
@@ -343,7 +359,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
               >
                 ←
               </Link>
-              <span className={styles.switchCounter}>{project.number} / {PROJECT_COUNT}</span>
+              <span className={styles.switchCounter}>{poster.number} / {PROJECT_COUNT}</span>
               <Link
                 href={nextHref}
                 className={styles.switchBtn}
@@ -354,23 +370,22 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
               </Link>
             </div>
           </div>
+          <div className={styles.mast} data-case-hero>
+            <div className={styles.folioLine}><span>Chaniago Labs / Case study</span><span>{project.category}</span></div>
+            <h1 ref={titleRef} className={styles.mastName}>{project.title}</h1>
+            <div className={styles.signature} aria-hidden="true"><b>{poster.word}</b></div>
+            <p className={styles.thesis}>{poster.decision}</p>
+            <div className={styles.instrument} data-instrument={project.visualKind} aria-hidden="true"><i /></div>
+          </div>
+          </header>
 
           {project.retail ? (
-            <RetailStudy project={project} titleRef={titleRef}
+            <RetailStudy project={project}
               onContact={event => goWithTransition("/?section=contact", "03 — CONTACT", project.accent, event)} />
           ) : <>
           <div className={styles.opener}>
             <header className={styles.hero}>
-              <div className={styles.eyebrowRow} data-case-hero>
-                <span className={styles.signalDot} aria-hidden="true" />
-                <span>CASE STUDY {project.number}</span>
-                <span className={styles.sep} aria-hidden="true">·</span>
-                <span>{project.focus}</span>
-              </div>
-
-              <div className={styles.titleMask} data-case-hero>
-                <h1 ref={titleRef} className={styles.title}>{project.title}</h1>
-              </div>
+              <h2 className={styles.evidenceHeading}>{project.focus}</h2>
 
               <p className={styles.summary} data-case-hero>{project.summary}</p>
             </header>
@@ -378,7 +393,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
             {project.visualKind === "incident" ? <NeoAvoCapture screen="overview" /> : <figure className={styles.coverWrap} data-case-hero>
               <ProjectVisualStage project={project} variant="hero" />
               <figcaption className={styles.coverCaption}>
-                <span>Plate {project.number} / {project.deliverables[0]}</span>
+                <span>Plate {poster.number} / {project.deliverables[0]}</span>
                 <ProjectImprint kind={project.visualKind} />
               </figcaption>
             </figure>}
@@ -474,7 +489,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
             <div className={styles.nextTopRow}>
               <span className={styles.nextEyebrow}>
                 <span className={styles.nextDot} aria-hidden="true" />
-                <span>NEXT CASE STUDY · {nextProject.number} / {PROJECT_COUNT}</span>
+                <span>Next study / {following.number}</span>
               </span>
               <span className={styles.nextMeta}>{nextProject.category}{nextProject.year ? ` · ${nextProject.year}` : ""}</span>
             </div>
@@ -499,13 +514,13 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
                 onClick={(e) => goWithTransition(backHref, "INDEX / PROJECTS", project.accent, e)}
               >
                 <span aria-hidden="true">←</span>
-                <span>Return to project rail</span>
+                <span>Back to projects</span>
               </Link>
               <span className={styles.nextSummary}>{nextProject.summary}</span>
             </div>
           </div>
         </footer>
       </div>
-    </main>
+    </Surface>
   );
 }

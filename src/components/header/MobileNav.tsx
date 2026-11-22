@@ -53,7 +53,7 @@ export function MobileNav() {
     };
   }, [open]);
 
-  const close = (section?: HeaderSection) => {
+  const close = (section?: HeaderSection, projectRuleFrom?: DOMRect) => {
     if (closeTimer.current) return;
     const panel = panelRef.current;
     if (panel) panel.style.setProperty("--exit-transform", getComputedStyle(panel).transform);
@@ -63,10 +63,10 @@ export function MobileNav() {
     closeTimer.current = setTimeout(() => {
       setOpen(false);
       if (!section) return;
-      if (pathname !== "/" || section.name === "project") {
+      if (pathname !== "/") {
         const href = sectionHref(section.name);
         if (href === pathname) { window.location.hash = "work"; return; }
-        triggerRouteTransition({ href, label: section.transition, navigate: () => router.push(href) });
+        triggerRouteTransition({ href, projectRuleFrom, label: section.transition, navigate: () => router.push(href) });
       } else {
         window.dispatchEvent(new CustomEvent("portfolio:request-section", { detail: { section: section.name } }));
       }
@@ -141,12 +141,12 @@ export function MobileNav() {
                 onClick={event => {
                   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                   event.preventDefault();
-                  close(section);
+                  close(section, event.currentTarget.querySelector("[data-menu-word]")?.getBoundingClientRect());
                 }}
               >
                 <span className={styles.linkContent}>
                   <span className={styles.linkIndex}>{section.index}</span>
-                  <span className={styles.linkLabel}>{section.label}</span>
+                  <span className={styles.linkLabel} data-menu-word>{section.label}</span>
                 </span>
                 <span className={styles.arrowWrap} aria-hidden="true">
                   <ArrowUpRight className={styles.arrow} focusable="false" />

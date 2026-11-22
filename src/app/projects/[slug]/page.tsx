@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PROJECTS } from "@/lib/projects";
+import { studyNeighbors } from "@/lib/projectPosters";
 import { ProjectCaseStudy } from "@/components/projects/ProjectCaseStudy";
 
 type ProjectPageProps = {
@@ -28,15 +29,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   if (projectIndex === -1) notFound();
 
   const project = PROJECTS[projectIndex];
-  const prevProject = PROJECTS[(projectIndex - 1 + PROJECTS.length) % PROJECTS.length];
-  const nextProject = PROJECTS[(projectIndex + 1) % PROJECTS.length];
 
   return (
     <ProjectCaseStudy
       key={project.slug}
       project={project}
-      prevProject={prevProject}
-      nextProject={nextProject}
+      {...studyNeighbors(slug)}
     />
   );
 }

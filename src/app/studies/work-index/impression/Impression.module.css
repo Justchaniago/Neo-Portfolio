@@ -1,4 +1,75 @@
 .impression { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.impression div:has(> [data-entry-rule]) { position: relative; border-top-color: transparent; gap: 12px; }
+.impression [data-entry-rule] { position: absolute; inset: -1px 0 auto; height: 1px; background: currentColor; transform-origin: left; }
+.impression [data-entry-rule] ~ span:last-child { white-space: nowrap; }
+.impression main { --paper: #fff; --ink: #050507; --mark: #c4551b; }
+.impression [data-work-reader] > div > section { background: #fff; }
+.impression [data-sheet] { --rule-h: clamp(34px, 6dvh, 56px); }
+
+/* One voice: the homepage sans. No serif, no italics. */
+.impression main article p, .impression main > div > div > span { font-family: var(--font-google-sans-flex), sans-serif; font-style: normal; letter-spacing: -.02em; }
+.impression section > nav [data-index] { width: auto; margin-right: auto; padding: 0; text-decoration: underline; text-underline-offset: .45em; }
+.impression [data-sheet] h2 { font: 600 clamp(26px, 3.3vw, 58px)/1 var(--font-google-sans-flex), sans-serif; letter-spacing: -.04em; }
+.impression [data-head] { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 1.4em; }
+.impression [data-meta] { margin: 0; font: 500 clamp(12px, 1vw, 15px)/1.3 var(--font-space-grotesk), sans-serif; }
+.impression [data-open] { font: 500 clamp(16px, 1.4vw, 21px)/1 var(--font-google-sans-flex), sans-serif; letter-spacing: -.02em; border-bottom: 2px solid var(--print); }
+.impression [data-short] { display: none; }
+@media (min-width: 900px) {
+  .impression [data-num] { display: none; }
+  .impression [data-short] { display: inline; }
+  .impression section > nav button:not([data-index]) { width: auto; padding: 0 0 0 1.6em; }
+}
+.impression [data-sheet] em {
+  font: 500 clamp(22px, min(3.4vw, 6.5dvh), 56px)/1.03 var(--font-google-sans-flex), sans-serif;
+  letter-spacing: -.035em; max-width: 13ch; text-wrap: balance; margin-bottom: .12em;
+}
+.impression [data-decision] { opacity: clamp(0,calc(var(--beat)*3 - 1.7),1); }
+
+/* The rule is an instrument: each one draws how its product works. */
+.impression [data-sheet] [data-rule] { height: var(--rule-h); border: 0; background: none; }
+.impression [data-sheet] [data-rule] i { position: absolute; inset: 0 auto 0 0; width: auto; height: auto; background: var(--print); transform: none; }
+.impression [data-kind="gong-cha-vip"] [data-rule] { border-bottom: 1px solid; border-right: 1px solid; background: repeating-linear-gradient(90deg,currentColor 0 1px,transparent 1px calc(100%/30)); }
+.impression [data-kind="gong-cha-vip"] [data-rule] i { left: auto; right: 0; width: calc(100%/30); transform: scaleX(clamp(0,calc(var(--beat)*2 - 1),1)); transform-origin: right; }
+.impression [data-kind="gong-cha-spin"] [data-rule] { border-block: 1px solid; border-right: 1px solid; background: repeating-linear-gradient(90deg,currentColor 0 1px,transparent 1px 25%); }
+.impression [data-kind="gong-cha-spin"] [data-rule] i { width: 25%; transform: translateX(calc(var(--beat)*300%)); }
+.impression [data-kind="neo-avo"] [data-rule] { background: repeating-linear-gradient(90deg,currentColor 0 calc(100%/12 - 6px),transparent calc(100%/12 - 6px) calc(100%/12)); }
+.impression [data-kind="neo-avo"] [data-rule] i { left: 75%; width: calc(100%/12 - 6px); background: var(--paper); box-shadow: inset 0 0 0 2px var(--print); opacity: var(--beat); }
+.impression [data-kind="vimax"] [data-rule] { background: currentColor; }
+.impression [data-kind="vimax"] [data-rule] i { inset: 0; background: repeating-linear-gradient(90deg,transparent 0 calc(20% - 6px),var(--paper) calc(20% - 6px) 20%); opacity: var(--beat); }
+.impression [data-kind="gong-cha-workspace"] [data-rule] {
+  background: linear-gradient(currentColor,currentColor) left / 16% 100% no-repeat, linear-gradient(currentColor,currentColor) right / 16% 100% no-repeat;
+}
+.impression [data-kind="gong-cha-workspace"] [data-rule]::after { content: ""; position: absolute; inset: 0 42%; background: var(--print); opacity: var(--beat); }
+.impression [data-kind="gong-cha-workspace"] [data-rule] i { inset: calc(50% - 1px) 16% auto; height: 2px; transform: scaleX(var(--beat)); }
+
+/* Each poster seats its word differently. */
+@media (min-width: 651px) {
+  .impression [data-kind="gong-cha-spin"] [data-bill], .impression [data-kind="neo-avo"] [data-bill] { flex-direction: row-reverse; }
+  .impression [data-kind="gong-cha-spin"] em, .impression [data-kind="neo-avo"] em { text-align: left; }
+  .impression [data-kind="neo-avo"] [data-bill] { align-items: flex-start; padding-top: 2dvh; }
+  .impression [data-kind="neo-avo"] em { align-self: flex-end; }
+}
+@media (min-width: 651px) and (min-height: 501px) {
+  .impression [data-kind="vimax"] [data-bill] { flex-direction: column-reverse; align-items: stretch; justify-content: space-between; }
+  .impression [data-kind="vimax"] [data-slot] { flex-shrink: 0; }
+  .impression [data-kind="vimax"] [data-slot] > span { font-size: min(28vw, 34dvh); }
+  .impression [data-kind="vimax"] em { align-self: flex-end; max-width: 22ch; }
+  .impression [data-kind="gong-cha-workspace"] [data-bill] { flex-direction: column; align-items: center; justify-content: flex-end; gap: 1.5dvh; }
+  .impression [data-kind="gong-cha-workspace"] em { max-width: none; margin-bottom: 0; text-align: center; }
+}
+@media (max-width: 650px) and (min-height: 501px) {
+  .impression [data-sheet] { --rule-h: 40px; }
+  .impression [data-sheet] em { font-size: clamp(22px, 7.6vw, 34px); }
+  .impression [data-kind="gong-cha-spin"] [data-slot], .impression [data-kind="neo-avo"] [data-slot] { align-self: flex-end; }
+  .impression [data-kind="gong-cha-spin"] em, .impression [data-kind="neo-avo"] em { align-self: flex-start; text-align: left; }
+  .impression [data-kind="neo-avo"] [data-bill] { justify-content: flex-start; padding-top: 3dvh; }
+  .impression [data-kind="gong-cha-workspace"] [data-bill] { align-items: center; }
+  .impression [data-kind="gong-cha-workspace"] em { align-self: center; text-align: center; }
+}
+@media (max-height: 500px) {
+  .impression [data-sheet] { --rule-h: 20px; }
+  .impression [data-sheet] em { font-size: 20px; max-width: 16ch; }
+}
 .impression [data-sheet] p:first-child { opacity: calc(1 - var(--read-after,0)); transform: none; }
 .impression [data-sheet] p+p { opacity: var(--read-after,0); transform: none; }
 
@@ -16,22 +87,68 @@
   .impression [data-kind="gong-cha-vip"] b {
     --t: clamp(0,calc(var(--beat)*1.7 - (1 - var(--order))*.7),1);
   }
-  .impression [data-kind="gong-cha-vip"] [data-rule] i {
-    width: calc(100% / 30); transform: scaleX(clamp(0,calc(var(--beat)*2 - 1),1)); transform-origin: right;
-  }
   .impression [data-kind="gong-cha-spin"] [data-after] b:first-child,
   .impression [data-kind="vimax"] [data-after] b:first-child { transform: none; }
   .impression [data-kind="gong-cha-spin"] [data-after="true"] b:first-child,
   .impression [data-kind="vimax"] [data-after="true"] b:first-child { visibility: hidden; }
-  /* Expose a full-size crop of the product through the expanding rule, never stretch its pixels. */
-  html:has(.impression)::view-transition-group(proof-gong-cha-vip),
-  html:has(.impression)::view-transition-group(proof-gong-cha-spin),
-  html:has(.impression)::view-transition-group(proof-neo-avo),
-  html:has(.impression)::view-transition-group(proof-vimax),
-  html:has(.impression)::view-transition-group(proof-gong-cha-workspace) { overflow: hidden; animation-duration: 720ms; }
-  html:has(.impression)::view-transition-new(proof-gong-cha-vip),
-  html:has(.impression)::view-transition-new(proof-gong-cha-spin),
-  html:has(.impression)::view-transition-new(proof-neo-avo),
-  html:has(.impression)::view-transition-new(proof-vimax),
-  html:has(.impression)::view-transition-new(proof-gong-cha-workspace) { height: 100%; object-fit: cover; object-position: center; }
+  html:has(.impression)::view-transition-old(root),
+  html:has(.impression)::view-transition-new(root) {
+    animation-duration: 320ms;
+    animation-timing-function: ease-in-out;
+  }
+}
+@media (max-width: 650px) {
+  .impression [data-slot] { flex-shrink: 0; }
+}
+@media (max-width: 650px) and (min-height: 501px) and (max-height: 640px) {
+  .impression [data-sheet] { --rule-h: 22px; }
+  .impression [data-sheet] [data-slot] > span { font-size: 23vw; }
+  .impression [data-sheet] em { font-size: 19px; max-width: 20ch; }
+}
+.impression section > nav button span { font: inherit; margin: 0; }
+.impression section > nav { justify-content: flex-end; }
+.impression [data-head] { margin-bottom: clamp(10px,2.2dvh,24px); }
+.impression [data-bill] { container-type: size; }
+.impression [data-slot] > span { font-size: min(28cqw,90cqh); }
+.impression [data-kind="gong-cha-vip"] [data-slot] > span { font-size: min(47cqw,96cqh); }
+.impression [data-kind="gong-cha-spin"] [data-slot] { transform-origin: left bottom; }
+@media (min-width:651px) {
+  .impression [data-kind="gong-cha-spin"] [data-slot] > span { font-size: min(26cqw,76cqh); }
+}
+.impression [data-kind="vimax"] [data-slot] > span,
+.impression [data-kind="gong-cha-workspace"] [data-slot] > span { font-size: min(30cqw,58cqh); }
+@media (max-width:650px) and (min-height:501px) {
+  .impression [data-sheet] [data-slot] > span { font-size: min(34cqw,49cqh); }
+  .impression [data-kind="gong-cha-vip"] [data-slot] > span { font-size: min(74cqw,56cqh); }
+}
+@media (max-height:500px) {
+  .impression [data-head] { margin-bottom: 6px; }
+  .impression [data-sheet] [data-slot] > span { font-size: min(21cqw,87cqh); }
+}
+@media (prefers-reduced-motion:no-preference) {
+  /* Sample the same incoming feed and outgoing depth as a scroll-driven handoff. */
+  .impression [data-sheet]:has(+ [data-peek]),
+  .impression [data-sheet][data-peek] {
+    animation: peek 2150ms cubic-bezier(.32,0,.2,1) both;
+  }
+  .impression [data-sheet]:has(+ [data-peek]) { --recede: var(--work-peek-cut) !important; }
+  .impression [data-sheet][data-peek] {
+    display: block; z-index: 1 !important; pointer-events: none;
+    --cut: var(--work-peek-cut) !important;
+    --feed: calc(1 - var(--work-peek-cut)) !important;
+  }
+  @keyframes peek {
+    0%,100% { --work-peek-cut: 0; }
+    43%,59% { --work-peek-cut: .555; }
+  }
+}
+@property --work-peek-cut {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+.impression section > nav [data-index] { white-space: nowrap; }
+@media (max-width: 359px) {
+  .impression [data-all] { display: none; }
+  .impression section > nav [data-index] { text-transform: capitalize; }
 }

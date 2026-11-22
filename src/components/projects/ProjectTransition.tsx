@@ -10,6 +10,7 @@ export type RouteTransitionDetail = {
   label?: string;
   accent?: string;
   replaceBefore?: string;
+  projectRuleFrom?: DOMRect;
   navigate: () => void;
 };
 
@@ -28,11 +29,40 @@ export function triggerRouteTransition(detail: RouteTransitionDetail) {
     detail.navigate();
     return;
   }
+  if (detail.href === "/projects" && detail.projectRuleFrom && window.location.pathname === "/") {
+    const rect = detail.projectRuleFrom;
+    window.dispatchEvent(new CustomEvent("portfolio:project-rule", { detail: rect }));
+    detail.navigate();
+    return;
+  }
   window.dispatchEvent(new CustomEvent<RouteTransitionDetail>(EVENT_NAME, { detail }));
 }
 
 export function ProjectTransition() {
   const pathname = usePathname();
+  const origin = useRef<DOMRect | null>(null);
+  useEffect(() => {
+    const remember = (event: Event) => { origin.current = (event as CustomEvent<DOMRect>).detail; };
+    window.addEventListener("portfolio:project-rule", remember);
+    return () => window.removeEventListener("portfolio:project-rule", remember);
+  }, []);
+  useEffect(() => {
+    const from = origin.current;
+    origin.current = null;
+    if (!from || pathname !== "/projects") return;
+    const rule = document.querySelector<HTMLElement>('[data-sheet]:not([hidden]) [data-entry-rule]');
+    if (!rule || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const to = rule.getBoundingClientRect();
+    const animation = rule.animate([
+      { transform: `translate(${from.left-to.left}px, ${from.bottom-to.top-4}px) scaleX(${from.width/to.width})` },
+      { transform: "none" },
+    ], { duration: 650, easing: "cubic-bezier(.22,.74,.18,1)" });
+    const stop = () => animation.cancel();
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
+    motion.addEventListener("change", stop);
+    window.addEventListener("resize", stop);
+    return () => { stop(); window.removeEventListener("resize", stop); motion.removeEventListener("change", stop); };
+  }, [pathname]);
   const veilRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const labelTextRef = useRef<HTMLSpanElement>(null);

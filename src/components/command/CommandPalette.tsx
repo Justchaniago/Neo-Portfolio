@@ -58,8 +58,10 @@ export function CommandPalette() {
       if (pathname !== "/" && actionToRun === "home") {
         route = "/";
       } else if (actionToRun === "projects") {
-        if (pathname === "/projects") window.location.hash = "work";
-        else route = "/projects";
+        if (pathname !== "/") route = "/?section=project";
+        else if (document.documentElement.dataset.projectsActive !== "true") {
+          window.dispatchEvent(new CustomEvent("portfolio:request-section", { detail: { section: "project" } }));
+        }
       } else if (pathname !== "/" && (actionToRun === "about" || actionToRun === "contact")) {
         route = `/?section=${actionToRun}`;
       } else {
@@ -103,7 +105,7 @@ export function CommandPalette() {
             const label =
               route === "/"
                 ? "CHANIAGO.ME"
-                : route === "/projects"
+                : route.includes("section=project")
                   ? "INDEX / PROJECTS"
                   : route.includes("section=about")
                     ? "02 — ABOUT"

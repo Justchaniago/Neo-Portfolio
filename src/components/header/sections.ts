@@ -7,7 +7,7 @@ export const headerSections = [
 export type HeaderSection = typeof headerSections[number];
 
 export function sectionHref(name: HeaderSection["name"]) {
-  return name === "project" ? "/projects" : `/?section=${name}`;
+  return `/?section=${name}`;
 }
 
 export function currentSection(pathname: string) {

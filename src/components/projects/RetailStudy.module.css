@@ -1,3 +1,17 @@
+.edition[data-edition] {
+  --ink: var(--study-ink); --muted: var(--study-muted); --mark: var(--project-accent); --mount: #121213;
+  --foil: #f4f4f1; --wash: color-mix(in srgb,var(--study-paper) 95%,var(--study-ink)); --line: var(--study-line);
+  --display: var(--font-google-sans-flex), sans-serif;
+  --mono: var(--font-space-grotesk), sans-serif;
+  --serif: var(--display);
+}
+.edition[data-edition] .mount { background: var(--mount); border-radius: 0; }
+.edition[data-edition] .mount::before { content: none; }
+.edition .headline { font-size: clamp(36px,5vw,78px); }
+.edition .headline em { font: inherit; letter-spacing: inherit; color: inherit; }
+.edition :is(.sample h2,.impression strong,.hub) { font-style: normal; }
+.edition .sample { background: var(--wash); border-block: 1px solid currentColor; }
+.edition .action { background: transparent; color: var(--ink); border-bottom: 2px solid var(--mark); border-radius: 0; padding-inline: 0; }
 .edition {
   --ink: #28201c;
   --muted: #61574f;
@@ -10,15 +24,6 @@
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --serif: Georgia, "Times New Roman", serif;
   color: var(--ink);
-}
-.edition[data-edition="vip"] {
-  --ink: #1b2a26;
-  --muted: #505e56;
-  --mark: #265345;
-  --mount: #193e33;
-  --foil: #efdaaa;
-  --wash: #eceddf;
-  --line: #bec8b9;
 }
 .cover, .spread, .notes { display: grid; gap: clamp(24px, 5vw, 72px); }
 .cover { padding-block: clamp(24px, 3.85vw, 58px); align-items: center; }
@@ -97,9 +102,6 @@
   border-radius: 50%;
   background: repeating-radial-gradient(circle, transparent 0 14px, #ffdb9826 14px 15px);
 }
-.edition[data-edition="vip"] .mount {
-  background: repeating-linear-gradient(120deg, transparent 0 15px, #c7d5b30e 16px 17px), var(--mount);
-}
 .edition[data-edition="vip"] .mount::before {
   width: 100%;
   bottom: -68%;
@@ -167,6 +169,7 @@
   background: #fff9ee;
   border: 1px solid var(--line);
 }
+.counterVisual { color: #211a14; --muted: #61574f; --mark: #a64214; }
 .wheelMount {
   position: relative;
   width: min(100%, 145px);

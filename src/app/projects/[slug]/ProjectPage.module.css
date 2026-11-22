@@ -1,3 +1,66 @@
+.page[data-project-case-study] {
+  --gutter: max(5vw,env(safe-area-inset-left),env(safe-area-inset-right));
+  --study-muted: color-mix(in srgb, var(--study-ink) 78%, var(--study-paper));
+  --study-line: color-mix(in srgb, var(--study-ink) 40%, var(--study-paper));
+  background: var(--study-paper); color: var(--study-ink);
+  font-family: var(--font-google-sans-flex), sans-serif;
+}
+.page .caseStudy { width: 100%; padding: 0 var(--gutter) clamp(48px,7vw,110px); }
+.jacket {
+  margin-inline: calc(-1 * var(--gutter));
+  padding: max(78px,12dvh) var(--gutter) clamp(28px,5vw,72px);
+  background: var(--study-paper); color: var(--study-ink);
+}
+.jacket .topBar { padding-bottom: 0; border-bottom: 1px solid currentColor; }
+.jacket :is(.backPill,.switchBtn), .page .specCol .backPill {
+  border: 0; background: transparent; color: inherit; border-radius: 0; padding-inline: 0;
+}
+.jacket .switchCounter { color: inherit; display: inline; font: 500 14px var(--font-space-grotesk),sans-serif; letter-spacing: 0; }
+.jacket a:hover { color: inherit; text-decoration: underline; text-underline-offset: .36em; }
+.mast { display: grid; grid-template-columns: minmax(0,1fr); }
+.folioLine {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 1em;
+  padding-top: 8px; font: 500 clamp(12px,1vw,16px)/1.35 var(--font-space-grotesk),sans-serif;
+}
+.mastName { margin: clamp(26px,4vw,68px) 0 0; font: 580 clamp(28px,4.2vw,74px)/1 var(--font-google-sans-flex),sans-serif; letter-spacing: -.05em; }
+.signature { margin-block: clamp(20px,3vw,48px); }
+.signature b { display: block; font: 650 min(31vw,37dvh)/.95 var(--font-google-sans-flex),sans-serif; font-variation-settings: "wdth" 79,"opsz" 130; letter-spacing: -.048em; }
+.thesis { margin: 0; max-width: 23ch; font: 510 clamp(22px,3.25vw,54px)/1.05 var(--font-google-sans-flex),sans-serif; letter-spacing: -.035em; text-wrap: balance; }
+.instrument { position: relative; height: clamp(17px,3.3vw,48px); margin-top: clamp(18px,3vw,50px); }
+.instrument i { position: absolute; inset-block: 0; background: #c4551b; }
+.instrument[data-instrument="pass"] { border-block-end: 1px solid; background: repeating-linear-gradient(90deg,currentColor 0 1px,transparent 1px calc(100%/30)); }
+.instrument[data-instrument="pass"] i { right: 0; width: calc(100%/30); }
+.instrument[data-instrument="wheel"] { border: 1px solid; background: repeating-linear-gradient(90deg,currentColor 0 1px,transparent 1px 25%); }
+.instrument[data-instrument="wheel"] i { right: 0; width: 25%; }
+.instrument[data-instrument="incident"],.instrument[data-instrument="film"] { --unit: calc(100%/12); background: repeating-linear-gradient(90deg,currentColor 0 calc(var(--unit) - 5px),transparent calc(var(--unit) - 5px) var(--unit)); }
+.instrument[data-instrument="incident"] i { left: 75%; width: calc(var(--unit) - 5px); background: var(--study-paper); border: 2px solid #c4551b; }
+.instrument[data-instrument="film"] { --unit: 20%; }
+.instrument[data-instrument="workspace"] { background: linear-gradient(currentColor,currentColor) left / 16% 100% no-repeat,linear-gradient(currentColor,currentColor) center / 100% 2px no-repeat,linear-gradient(currentColor,currentColor) right / 16% 100% no-repeat; }
+.instrument[data-instrument="workspace"] i { inset-inline: 43%; background: #ffb37a; }
+.evidenceHeading { max-width: 19ch; font: 530 clamp(28px,3.6vw,64px)/1.04 var(--font-google-sans-flex),sans-serif; letter-spacing: -.045em; }
+.page .workflowSection,.page .specStrip { border-radius: 0; background: transparent; border: 0; border-top: 1px solid currentColor; padding-inline: 0; }
+.page .chapterHeading { font: 530 clamp(26px,3.2vw,50px)/1.08 var(--font-google-sans-flex),sans-serif; letter-spacing: -.04em; }
+.page .nextPortal { background: var(--study-paper); color: var(--study-ink); border-top: 1px solid currentColor; padding-inline: var(--gutter); }
+.page :is(.workflowStep,.chapterHeading,.meta dd) { color: var(--study-ink); }
+.page :is(.summary,.specHeading,.chapterBody,.meta dt,.workflowDescription,.coverCaption) { color: var(--study-muted); }
+.page :is(.workflowCard,.meta,.chapterRow,.coverCaption) { border-color: var(--study-line); }
+.page .specList li { background: transparent; color: inherit; border-color: var(--study-line); }
+.page .coverCaption svg { color: var(--project-accent); }
+.page .nextInner { max-width: none; width: 100%; }
+.page :is(.nextEyebrow,.nextMeta,.nextHeroLink,.nextSummary,.allProjectsLink,.nextCircle) { color: inherit; }
+.page .nextHeroLink { border-color: currentColor; }
+.page .nextDot { display: none; }
+.page :is(.nextCircle,.allProjectsLink) { border: 0; border-radius: 0; background: transparent; }
+.page .allProjectsLink { padding-inline: 0; text-decoration: underline; text-underline-offset: .4em; }
+@media (min-width: 720px) {
+  .mast { grid-template-columns: 1.15fr 1fr; column-gap: 4vw; align-items: end; }
+  .mast > :is(.folioLine,.mastName,.instrument) { grid-column: 1/-1; }
+  .signature { margin-bottom: 0; }
+  .signature b { font-size: min(19vw,38dvh); }
+  .thesis { text-align: right; justify-self: end; }
+  .page:is([data-project-case-study="gong-cha-spin"],[data-project-case-study="neo-avo"]) .signature { grid-column: 2; grid-row: 3; justify-self: end; }
+  .page:is([data-project-case-study="gong-cha-spin"],[data-project-case-study="neo-avo"]) .thesis { grid-column: 1; grid-row: 3; text-align: left; justify-self: start; }
+}
 .page {
   position: relative;
   flex: 1;
@@ -10,13 +73,13 @@
   color: #0a0a0a;
 }
 
-.page[data-retail-edition] {
+.page[data-project-case-study] {
   --header-inset: calc(76px + env(safe-area-inset-top));
   scroll-padding-top: var(--header-inset);
 }
 
 /* Keep moving copy out of the fixed header's reading area. */
-.page[data-retail-edition]::before {
+.page[data-project-case-study]::before {
   content: "";
   display: block;
   position: sticky;
@@ -24,12 +87,12 @@
   z-index: 5;
   height: var(--header-inset);
   margin-bottom: calc(-1 * var(--header-inset));
-  background: linear-gradient(#fafaf8 78%, transparent);
+  background: var(--study-paper);
   pointer-events: none;
 }
 
 @media (min-width: 768px) {
-  .page[data-retail-edition] { --header-inset: calc(92px + env(safe-area-inset-top)); }
+  .page[data-project-case-study] { --header-inset: calc(92px + env(safe-area-inset-top)); }
 }
 
 .progressTrack {
@@ -274,7 +337,7 @@
 }
 
 .stack {
-  color: #3c4854 !important;
+  color: var(--study-muted);
 }
 
 .coverWrap {

@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import styles from "./ProjectsExperience.module.css";
-import { ProjectDetails } from "./ProjectDetails";
-import { ProjectRail } from "./ProjectRail";
-import { triggerRouteTransition } from "./ProjectTransition";
+import { WorkIndex } from "@/app/studies/work-index/WorkIndex";
+import impression from "@/app/studies/work-index/impression/Impression.module.css";
 import { pageMotion, sheetDuration } from "@/lib/pageMotion";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
 import { BlueprintWorkspace } from "@/components/blueprint/BlueprintWorkspace";
@@ -25,7 +23,6 @@ const setProjectScrollLock = (locked: boolean) => {
 };
 
 export function ProjectsExperience({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const hero = useRef<HTMLDivElement>(null);
   const layer = useRef<HTMLElement>(null);
   const surfacePath = useRef<SVGPathElement>(null);
@@ -36,25 +33,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   const returning = useRef(false);
   const initialQueryRef = useRef<{ section: string | null; matchedIdx: number } | null>(null);
   const [active, setActive] = useState(false);
-  const [projectIndex, setProjectIndex] = useState(0);
-  const [stepDirection, setStepDirection] = useState(1);
-
-  const handleProjectChange = useCallback((index: number, direction = 1) => {
-    setStepDirection(direction >= 0 ? 1 : -1);
-    setProjectIndex(index);
-  }, []);
-
-  const handleOpenProject = useCallback((index: number) => {
-    const project = PROJECTS[index] ?? PROJECTS[0];
-    const href = `/projects/${project.slug}`;
-    triggerRouteTransition({
-      href,
-      label: `${project.number} — ${project.title}`,
-      accent: project.accent,
-      replaceBefore: `/?section=project&project=${project.slug}`,
-      navigate: () => router.push(href),
-    });
-  }, [router]);
+  const [projectIndex, setProjectIndex] = useState(-1);
 
   const syncBackgroundDepth = useCallback(() => {
     const heroEl = hero.current;
@@ -420,8 +399,6 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [closeProjects, parkUnderneath]);
 
-  const currentProject = PROJECTS[projectIndex] ?? PROJECTS[0];
-
   return <>
     <div ref={hero} className={styles.hero} data-home-chapter="INDEX">
       {children}
@@ -437,7 +414,6 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       id="projects-layer"
       className={styles.layer}
       contentClassName={styles.scroll}
-      style={{ "--project-accent": currentProject.accent } as React.CSSProperties}
       inert={!active}
       aria-hidden={!active}
       aria-label="Projects"
@@ -458,17 +434,8 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         closeProjects("slide-down");
       }}
     >
-      <div ref={scroller} className={styles.stage} tabIndex={-1}>
-        <ProjectDetails
-          activeIndex={projectIndex}
-          direction={stepDirection}
-          onOpenProject={handleOpenProject}
-        />
-        <ProjectRail
-          activeIndex={projectIndex}
-          onChange={handleProjectChange}
-          onOpenProject={handleOpenProject}
-        />
+      <div ref={scroller} className={`${styles.stage} ${impression.impression}`} tabIndex={-1}>
+        {active && <WorkIndex impression embedded initialSlug={PROJECTS[projectIndex]?.slug} />}
       </div>
     </StackSection>
     <StaticPagesExperience />

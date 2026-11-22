@@ -28,10 +28,3 @@
   .lettering { font-size: clamp(42px, 10.8vw, 74px); }
   .proof { grid-template-columns: 1fr; gap: 1.5rem; }
 }
-@media (prefers-reduced-motion: no-preference) {
-  html:has(.reader)::view-transition-group(*) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.32,0,.18,1); }
-  @supports not (view-transition-name: work) {
-    .detail .proof { animation: unfold 520ms cubic-bezier(.22,.68,.25,1) both; }
-  }
-}
-@keyframes unfold { from { clip-path: inset(0 0 100%); } to { clip-path: inset(0); } }

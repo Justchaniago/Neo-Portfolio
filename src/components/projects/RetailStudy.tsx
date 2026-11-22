@@ -1,7 +1,8 @@
-import { useRef, useState, type MouseEventHandler, type Ref } from "react";
+import { useRef, useState, type MouseEventHandler } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { RetailProject } from "@/lib/projects";
+import { projectPosters } from "@/lib/projectPosters";
 import { PassCounter, SpinCounter } from "./RetailCounter";
 import styles from "./RetailStudy.module.css";
 
@@ -14,7 +15,7 @@ function ProductProof({ project }: { project: RetailProject }) {
     <figure className={styles.proof} data-case-hero>
       <div className={styles.mount}>
         <div className={styles.folio}>
-          <span>{shot.sample ? "Product UI / Demo data" : "Live site capture"}</span><span>Fig. {project.number}.{frame + 1}</span>
+          <span>{shot.sample ? "Product UI / Demo data" : "Live site capture"}</span><span>Fig. {projectPosters[project.slug].number}.{frame + 1}</span>
         </div>
         <div className={styles.canvas} data-format={portrait ? "portrait" : "landscape"}>
           {portrait && <div className={styles.impression}>
@@ -42,9 +43,8 @@ function ProductProof({ project }: { project: RetailProject }) {
   );
 }
 
-export function RetailStudy({ project, titleRef, onContact }: {
+export function RetailStudy({ project, onContact }: {
   project: RetailProject;
-  titleRef: Ref<HTMLHeadingElement>;
   onContact: MouseEventHandler<HTMLAnchorElement>;
 }) {
   const sample = useRef<HTMLElement>(null);
@@ -64,11 +64,9 @@ export function RetailStudy({ project, titleRef, onContact }: {
     <div className={styles.edition} data-edition={spin ? "spin" : "vip"}>
       <div className={styles.cover}>
         <header className={styles.lead}>
-          <p className={styles.kicker} data-case-hero><span>{project.number}</span><strong>{project.title}</strong><i />{project.category}</p>
-          <h1 className={styles.headline} ref={titleRef} data-case-hero>
-            <span className="sr-only">{project.title}: </span>
+          <h2 className={styles.headline} data-case-hero>
             {retail.headline[0]} <em>{retail.headline[1]}</em>
-          </h1>
+          </h2>
           <p className={styles.standfirst} data-case-hero>{project.summary}</p>
           <div className={styles.actions} data-case-hero>
             <button type="button" className={styles.action} onClick={openSample}>{project.workflowHeading}<span aria-hidden="true">↓</span></button>

@@ -1,74 +1,60 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { NeoAvoCapture } from "@/components/projects/NeoAvoCapture";
-import { ProjectVisualStage } from "@/components/projects/ProjectVisualStage";
+import { ProjectCaseStudy } from "@/components/projects/ProjectCaseStudy";
 import { getProjectBySlug } from "@/lib/projects";
+import { studyNeighbors } from "@/lib/projectPosters";
 import { KineticIndex } from "./KineticIndex";
 import s from "./WorkIndex.module.css";
 
-function Lettering({ slug, title }: { slug: string; title: string }) {
-  return <span className={s.lettering} style={{ viewTransitionName: `work-${slug}` }}>
-    {slug === "gong-cha-workspace" ? <>Gong Cha<br />Workspace</> : title}
-  </span>;
-}
-
-export function WorkIndex({ impression = false }: { impression?: boolean }) {
-  const [slug, setSlug] = useState("");
+export function WorkIndex({ impression = false, embedded = false, initialSlug = "" }: { impression?: boolean; embedded?: boolean; initialSlug?: string }) {
+  const [slug, setSlug] = useState(initialSlug);
   const reader = useRef<HTMLElement>(null);
   const returnY = useRef(0);
-  const selected = getProjectBySlug(slug)?.project;
-
-  useEffect(() => {
-    let current = "";
-    const sync = (initial: boolean) => {
-      const key = location.hash.slice(1);
-      const next = getProjectBySlug(key) ? key : "";
-      if (next === current) return;
-      const previous = current;
-      current = next;
-      if (!previous) returnY.current = reader.current?.scrollTop ?? 0;
-      const show = () => {
-        flushSync(() => setSlug(next));
-        if (!reader.current) return;
-        if (next) reader.current.scrollTop = 0;
-        const focus = next ? reader.current.querySelector("h1") : reader.current.querySelector<HTMLElement>(`a[href="#${previous}"]`);
-        if (!initial) focus?.focus({ preventScroll: true });
-      };
-      if (!initial && document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        document.startViewTransition(show);
-      } else show();
+  const stage = useRef<HTMLDivElement>(null);
+  const selected = getProjectBySlug(slug);
+  const navigate = useCallback((next: string) => {
+    const host = stage.current, inner = host?.firstElementChild;
+    if (!host || !inner || host.hasAttribute("data-draft")) return;
+    if (reader.current) returnY.current = reader.current.scrollTop;
+    const show = () => {
+      flushSync(() => setSlug(next));
+      reader.current?.querySelector<HTMLElement>('[data-sheet][aria-hidden=false] h2 a')?.focus({ preventScroll: true });
     };
-    const change = () => sync(false);
-    const first = requestAnimationFrame(() => sync(true));
-    window.addEventListener("hashchange", change);
-    return () => { cancelAnimationFrame(first); window.removeEventListener("hashchange", change); };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return show();
+    const paper = () => {
+      const face = host.querySelector('[data-sheet][aria-hidden="false"], [data-project-case-study]');
+      if (face) host.style.backgroundColor = getComputedStyle(face).backgroundColor;
+    };
+    // One sequence both ways: the view thins to a line drawing, the next layout is drawn, then inked in.
+    const timing = { easing: "cubic-bezier(.4,0,.2,1)", fill: "both" } as const;
+    (async () => {
+      host.setAttribute("data-draft", "");
+      paper();
+      const out = inner.animate([{ "--draft": 0, opacity: 1 }, { "--draft": 1, opacity: 1, offset: .68 }, { "--draft": 1, opacity: 0 }], { ...timing, duration: 560 });
+      await out.finished.catch(() => {});
+      show();
+      if (next) paper();
+      const back = inner.animate([{ "--draft": 1, opacity: 0 }, { "--draft": 1, opacity: 1, offset: .28 }, { "--draft": 0, opacity: 1 }], { ...timing, duration: 820 });
+      out.cancel();
+      await back.finished.catch(() => {});
+      back.cancel();
+      host.removeAttribute("data-draft");
+      host.style.backgroundColor = "";
+    })();
   }, []);
 
-  return <main className={s.reader} ref={reader}>
-    {selected ? <div className={s.sheet}>
-      <div className={s.colophon}>
-        <a href="#work">← Selected work</a>
-        <span>Chaniago Labs</span>
-      </div>
-      <article className={s.detail}>
-        <h1 tabIndex={-1}><Lettering slug={slug} title={selected.title} /></h1>
-        <div className={s.proof}>
-          <div style={{viewTransitionName:`proof-${slug}`}}>
-          {selected.retail ? <figure className={s.retail} style={{ background: selected.accentSoft }}>
-            <Image src={selected.retail.screenshots[0].src} alt={selected.retail.screenshots[0].alt}
-              width={selected.retail.screenshots[0].width} height={selected.retail.screenshots[0].height} unoptimized />
-            <figcaption>{selected.retail.screenshots[0].label} / Demo data</figcaption>
-          </figure> : selected.visualKind === "incident" ? <NeoAvoCapture screen="incidents" /> : <ProjectVisualStage project={selected} />}
-          </div>
-          <div className={s.note}>
-            <p>{selected.summary}</p>
-            <a href={`/projects/${slug}`}>Full case study <span aria-hidden="true">↗</span></a>
-          </div>
-        </div>
-      </article>
-    </div> : <KineticIndex returnY={returnY} impression={impression} />}
-  </main>;
+  const Surface = embedded ? "section" : "main";
+  return <div ref={stage} data-draft-stage=""><div>{selected ? <ProjectCaseStudy key={slug} project={selected.project}
+    {...studyNeighbors(slug)} onSelect={navigate} /> : <Surface className={s.reader} ref={reader} data-work-reader="" onClick={event => {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = (event.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');
+    const next = link && getProjectBySlug(link.hash.slice(1));
+    if (!next) return;
+    event.preventDefault();
+    navigate(next.project.slug);
+  }}>
+    <KineticIndex returnY={returnY} impression={impression} />
+  </Surface>}</div></div>;
 }

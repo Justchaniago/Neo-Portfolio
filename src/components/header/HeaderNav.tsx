@@ -110,11 +110,12 @@ export function HeaderNav() {
             onClick={(event) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
               event.preventDefault();
-              if (pathname !== "/" || item.name === "project") {
+              if (pathname !== "/") {
                 const href = sectionHref(item.name);
                 if (href === pathname) { window.location.hash = "work"; return; }
                 triggerRouteTransition({
                   href,
+                  projectRuleFrom: item.name === "project" ? event.currentTarget.getBoundingClientRect() : undefined,
                   label: item.transition,
                   navigate: () => router.push(href),
                 });

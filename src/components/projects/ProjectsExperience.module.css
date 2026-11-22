@@ -44,7 +44,6 @@
   height: 100%;
   overflow: hidden;
   background: transparent;
-  padding: max(160px, calc(env(safe-area-inset-top) + 120px)) max(24px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
 }
 
 .stage {
@@ -55,8 +54,5 @@
 
 .trigger:focus-visible { outline: 2px solid #dfa13d; outline-offset: 4px; }
 
-@media (min-width: 768px) {
-  .scroll { padding-inline: 44px; }
-}
 
 @media (prefers-reduced-motion: reduce) { .layer { will-change: auto; } }

@@ -47,3 +47,19 @@ body {
     radial-gradient(circle, rgb(160 24 56 / 0.52) 0 1px, transparent 1.6px) 19px 23px / 67px 61px,
     radial-gradient(ellipse at 50% 50%, transparent 18%, rgb(160 24 56 / 0.08) 36%, transparent 62%);
 }
+
+/* Project poster <-> case study: the view becomes a line drawing, then is inked in again. */
+@property --draft { syntax: "<number>"; inherits: true; initial-value: 0; }
+[data-draft-stage], [data-draft-stage] > div { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+[data-draft-stage] { transition: background-color 320ms ease; }
+[data-draft] > div { pointer-events: none; }
+[data-draft] > div * {
+  -webkit-text-fill-color: color-mix(in srgb, currentColor calc((1 - var(--draft)) * 100%), transparent) !important;
+  -webkit-text-stroke: min(1px, .05em) color-mix(in srgb, currentColor calc(clamp(0, var(--draft) * 2 - .7, 1) * 100%), transparent) !important;
+}
+[data-draft] > div :is(figure, [data-visual-kind]) {
+  outline: 1px solid color-mix(in srgb, currentColor calc(var(--draft) * 100%), transparent); outline-offset: -1px;
+}
+[data-draft] > div :is(figure, [data-visual-kind]) > *,
+[data-draft] > div :is(img, video, canvas, [data-rule] i, [data-instrument] i) { opacity: calc(1 - var(--draft)); }
+[data-draft] > div :is([data-rule], [data-instrument]) { opacity: calc(1 - var(--draft) * .8); }
