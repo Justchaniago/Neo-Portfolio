@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createBurnEdge } from "./burnEdge";
 import { createRadialBurst } from "./radialBurst";
 import styles from "./NarrativeSection.module.css";
 
@@ -31,15 +32,18 @@ export function NarrativeSection() {
   const stage = useRef<HTMLDivElement>(null);
   const copyRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const edgeRef = useRef<HTMLCanvasElement>(null);
   const hudRef = useRef<HTMLDivElement>(null);
   const hudFillRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const element = section.current, visual = stage.current, copy = copyRef.current, canvas = canvasRef.current;
     const scroller = element?.closest<HTMLElement>("main");
-    if (!element || !visual || !copy || !canvas || !scroller) return;
+    if (!element || !visual || !copy || !canvas || !scroller || !edgeRef.current) return;
     const burst = createRadialBurst(canvas);
+    const edge = createBurnEdge(edgeRef.current, element);
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+    const contrast = matchMedia("(forced-colors: active)");
     const finePointer = matchMedia("(hover: hover) and (pointer: fine)");
     const captions = Array.from(visual.querySelectorAll<HTMLElement>("[data-tagline]"));
     const words = Array.from(copy.querySelectorAll<HTMLElement>("[data-narrative-word]")).map(el => ({
@@ -182,6 +186,7 @@ export function NarrativeSection() {
     };
     const wake = () => { if (!raf && visible && !reduced.matches && !document.hidden && !disposed) raf = requestAnimationFrame(render); };
     const scroll = () => {
+      edge.scroll(clamp(1 + (scroller.scrollTop - top) / height), scroller.scrollTop);
       if (reading) { wake(); return; }
       const oldTarget = target;
       const nextTarget = clamp((scroller.scrollTop - top) / travel);
@@ -190,13 +195,14 @@ export function NarrativeSection() {
       if (!reading && target < 0.3 && !bypassReading) readingDone = false;
       const enteringForward = !readingDone && !bypassReading && oldTarget < READING_START && target >= READING_START;
       const enteringReverse = !bypassReading && oldTarget >= READING_END && target < READING_END;
-      if (!reduced.matches && externalLocks.size === 0 && (enteringForward || enteringReverse)) {
+      // A fast flick may cross the entire reading interval. Don't drag it back
+      // into Narrative; when landing inside, start at the actual landing point.
+      if (!reduced.matches && externalLocks.size === 0 && target >= READING_START && target <= READING_END && (enteringForward || enteringReverse)) {
         reading = true; inputDistance = 0;
         direction = enteringReverse ? -1 : 1;
-        current = target = previous = enteringReverse ? READING_END : READING_START;
+        current = previous = target;
         taglineProgress = current;
         setReadingLock(true);
-        scroller.scrollTop = top + travel * current;
         wake();
         return;
       }
@@ -211,6 +217,7 @@ export function NarrativeSection() {
       const bounds = scroller.getBoundingClientRect();
       top = element.getBoundingClientRect().top - bounds.top + scroller.scrollTop;
       width = visual.clientWidth; height = visual.clientHeight;
+      edge.resize(width, height, !reduced.matches && !contrast.matches);
       viewTop = bounds.top; viewLeft = visual.getBoundingClientRect().left;
       travel = Math.max(1, element.offsetHeight - height);
       words.forEach(word => {
@@ -303,6 +310,7 @@ export function NarrativeSection() {
     visual.addEventListener("pointermove", pointer, { passive: true });
     visual.addEventListener("pointerleave", leave);
     reduced.addEventListener("change", motionChange);
+    contrast.addEventListener("change", measure);
     document.addEventListener("visibilitychange", visibility);
     void document.fonts.ready.then(measure);
     measure();
@@ -321,12 +329,15 @@ export function NarrativeSection() {
       window.removeEventListener("portfolio:toggle-projects", navigation);
       window.removeEventListener("portfolio:scroll-lock", lockChanged);
       visual.removeEventListener("pointerleave", leave); reduced.removeEventListener("change", motionChange);
+      contrast.removeEventListener("change", measure);
+      edge.resize(0, 0, false);
       document.removeEventListener("visibilitychange", visibility);
     };
   }, []);
 
   return (
     <section ref={section} className={styles.section} data-home-chapter="CRAFT" aria-label="A little about the work">
+      <canvas ref={edgeRef} className={styles.burnEdge} aria-hidden="true" />
       <div ref={stage} className={styles.stage}>
         <canvas ref={canvasRef} className={styles.burst} aria-hidden="true" />
         <div ref={copyRef} className={styles.copy}>

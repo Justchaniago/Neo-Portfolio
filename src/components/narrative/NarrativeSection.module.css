@@ -20,6 +20,25 @@
   box-shadow: 0 -24px 64px rgb(0 0 0 / 0.28);
 }
 
+.burnEdge { display: none; }
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .section[data-burn-ready] .stage { border-radius: 0; box-shadow: none; }
+  .section[data-burning] .stage {
+    clip-path: inset(var(--burn-depth) 0 0);
+    background: #050507;
+  }
+  .section[data-burning] .burnEdge {
+    display: block;
+    position: absolute;
+    z-index: 1;
+    top: calc(-1 * var(--burn-rise));
+    left: 0;
+    width: 100%;
+    height: calc(var(--burn-rise) + var(--burn-depth) + 2px);
+    pointer-events: none;
+  }
+}
+
 .copy {
   position: relative;
   z-index: 1;
