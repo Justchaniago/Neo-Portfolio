@@ -6,6 +6,7 @@ const vertex = `
 attribute vec3 sphere;
 attribute vec2 island;
 attribute float grain;
+attribute float inland;
 attribute vec2 nextXY;
 attribute vec4 star;
 uniform vec2 view;
@@ -13,7 +14,7 @@ uniform vec4 camera; // sin/cos longitude, sin/cos latitude
 uniform vec4 pose;   // radius, map pixels/degree, flatten, next shape
 uniform vec4 light;  // arrival, dawn, DPR, grain diameter
 uniform vec2 scatter; // displacement in pixels, phase along each seeded path
-uniform vec4 fold;    // gather, rim radius in pixels, opacity, core radius in pixels
+uniform float dissolve;
 varying vec4 ink;
 void main() {
   float x = sphere.x * camera.y - sphere.z * camera.x;
@@ -34,12 +35,12 @@ void main() {
   vec2 map = island * vec2(25.,11.) * pose.y;
   vec2 at = mix(mix(ball, map, morph), nextXY * view * .5, pose.w);
   at += scatter.x * vec2(sin(seed*93. + scatter.y + island.x*7.), cos(seed*57. - scatter.y*1.2 + island.y*9.));
-  float pull = smoothstep(seed*.45, .55+seed*.45, fold.x);
-  if (pull > 0.) {
-    // Spiral clockwise into one grain; the rim radius then carries the grains out on the edge of the opening disc.
-    float h = fract(seed*71.3), a = -1.9*pull*pull*(.6+.8*fract(seed*13.7));
-    vec2 home = vec2(cos(seed*311.), sin(seed*311.)) * (sqrt(h)*fold.w + fold.y*(.985+.13*h*h));
-    at = mix(vec2(cos(a)*at.x - sin(a)*at.y, sin(a)*at.x + cos(a)*at.y), home, pull);
+  float loose = 0.;
+  if (dissolve > 0.) {
+    float delay = .36*inland + .14*seed;
+    loose = smoothstep(delay, delay+.5, dissolve);
+    float wind = island.x*9. + island.y*5. + seed*4. + loose*(seed-.5)*5.;
+    at += loose * min(view.x,view.y) * (.22+.32*seed) * vec2(cos(wind), sin(wind));
   }
   vec2 clip = at * 2. / view + vec2(0.,-.04);
   gl_Position = vec4(clip, 0., 1.);
@@ -58,7 +59,7 @@ void main() {
   float night = clamp((pixel.x + .32 * pixel.y - front + feather)/(2.*feather),0.,1.);
   vec3 daylight = vec3(.059,.072,.085), dusk = vec3(.145,.20,.23), silver = vec3(.92,.94,.93);
   vec3 color = mix(mix(daylight,dusk,min(1.,night*2.)),silver,max(0.,night*2.-1.));
-  ink = vec4(color,mix(alpha, .44+.45*seed, morph)*fold.z);
+  ink = vec4(color,mix(alpha, .44+.45*seed, morph)*(1.-smoothstep(.1,1.,loose)));
   float starSize = star.z < 0. ? 1.15+1.5*star.w : .62+1.15*star.w;
   gl_PointSize = max(1., light.z * mix(starSize, light.w*(.66+.65*seed+.18*rim*(1.-morph)), gather));
 }`;
@@ -72,11 +73,24 @@ void main() {
 
 export type PointPose = {
   progress: number; flight: number; scale: number; next?: number; night?: boolean; spin?: number;
-  gather?: number; rim?: number; fade?: number;
+  dissolve?: number;
 };
-// Radius of the single grain the map gathers into; the opening disc starts from it.
-export const CORE = 2.6;
 const spread = (p: number) => ramp(p,.35,.54) * (1-ramp(p,.54,.80));
+
+// Count nearby occupied map cells once. Coastal grains release before interior grains.
+function inlandWeights(points: Int16Array) {
+  const stride = 106;
+  const cells = new Uint8Array(stride * 50);
+  const ids = Uint16Array.from({ length: points.length / 6 }, (_, i) => {
+    const x = Math.round(points[6*i+3] / 32767 * 50) + 52;
+    const y = Math.round(points[6*i+4] / 32767 * 22) + 24;
+    const cell = y * stride + x;
+    cells[cell] = 1;
+    return cell;
+  });
+  return Float32Array.from(ids, c => (cells[c-2] + cells[c+2] + cells[c-2*stride] + cells[c+2*stride]
+    + cells[c-stride-1] + cells[c-stride+1] + cells[c+stride-1] + cells[c+stride+1]) / 8);
+}
 
 // Same IDs and endpoints on devices without a usable GPU. A shorter prefix
 // keeps the islands legible while bounding per-frame CPU work.
@@ -84,6 +98,7 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
   const ctx = canvas.getContext("2d");
   if (!ctx) throw Error("Canvas unavailable");
   const data = new Int16Array(bytes);
+  const inland = inlandWeights(data);
   const count = Math.min(data.length / 6, 5600), stars = createStarSeeds(count);
   const ink = inkRamp(0x101418, 0x25333b, 0xe6eae8);
   let w = 1, h = 1, ratio = 1, target: Float32Array | null = null;
@@ -96,7 +111,7 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
       if (xy.length !== data.length / 3) throw Error("Expected one XY destination per particle");
       target = xy;
     },
-    draw({ progress, flight, scale, next = 0, night = false, spin = 0, gather: fold = 0, rim = 0, fade = 1 }: PointPose) {
+    draw({ progress, flight, scale, next = 0, night = false, spin = 0, dissolve = 0 }: PointPose) {
       const focus = ramp(progress, 0, .42), rad = Math.PI / 180;
       const lon = (28 + 90 * focus + spin) * rad, lat = (16 - 18.5 * focus) * rad;
       const sx = Math.sin(lon), cx = Math.cos(lon), sy = Math.sin(lat), cy = Math.cos(lat);
@@ -106,6 +121,7 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
       const front = -feather + (w+h*.32+2*feather)*dawn;
       ctx.setTransform(ratio,0,0,ratio,0,0);
       ctx.clearRect(0,0,w,h);
+      if (dissolve >= 1) return;
       const size = Math.max(1, Math.min(2.6, earthRadius(w,h,1)/105));
       const sun = ramp(flight,0,.35);
       for (let id = 0; id < count; id++) {
@@ -131,12 +147,14 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
         if (target && next) {
           dx += (target[i/3]*w*.5-dx)*next; dy += (target[i/3+1]*h*.5-dy)*next;
         }
-        const pull = fold ? ramp(fold, seed*.45, .55+seed*.45) : 0;
-        if (pull) {
-          const hh = seed*71.3%1, turn = -1.9*pull*pull*(.6+.8*(seed*13.7%1));
-          const out = Math.sqrt(hh)*CORE + rim*(.985+.13*hh*hh), ct = Math.cos(turn), st = Math.sin(turn);
-          const rx = ct*dx-st*dy, ry = st*dx+ct*dy;
-          dx = rx+(Math.cos(seed*311)*out-rx)*pull; dy = ry+(Math.sin(seed*311)*out-ry)*pull;
+        let fade = 1;
+        if (dissolve > 0) {
+          const delay = .36*inland[id]+.14*seed, loose = ramp(dissolve,delay,delay+.5);
+          if (loose >= 1) continue;
+          const wind = (data[i+3]*9+data[i+4]*5)/32767+seed*4+loose*(seed-.5)*5;
+          const drift = loose*Math.min(w,h)*(.22+.32*seed);
+          dx += drift*Math.cos(wind); dy += drift*Math.sin(wind);
+          fade = 1-ramp(loose,.1,1);
         }
         const px = w*.5+dx, py = h*.52-dy;
         const alpha = (.38+.6*seed)*(grain > 0 ? 1 : .34)*(z >= 0 ? 1 : .24)
@@ -192,8 +210,15 @@ export function createPointCloud(canvas: HTMLCanvasElement, bytes: ArrayBuffer) 
     gl.enableVertexAttribArray(star);
     gl.vertexAttribPointer(star, 4, gl.SHORT, true, 0, 0);
     const destination = gl.getAttribLocation(program, "nextXY");
+    const coast = gl.createBuffer()!;
+    buffers.push(coast);
+    gl.bindBuffer(gl.ARRAY_BUFFER, coast);
+    gl.bufferData(gl.ARRAY_BUFFER, inlandWeights(new Int16Array(bytes)), gl.STATIC_DRAW);
+    const inland = gl.getAttribLocation(program, "inland");
+    gl.enableVertexAttribArray(inland);
+    gl.vertexAttribPointer(inland, 1, gl.FLOAT, false, 0, 0);
     const loc = (name: string) => gl.getUniformLocation(program, name);
-    const view = loc("view"), cam = loc("camera"), pose = loc("pose"), light = loc("light"), scatter = loc("scatter"), gathered = loc("fold");
+    const view = loc("view"), cam = loc("camera"), pose = loc("pose"), light = loc("light"), scatter = loc("scatter"), exit = loc("dissolve");
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     let width = 0, height = 0, ratio = 1, budget = count, diameter = 1, nextBuffer: WebGLBuffer | null = null;
@@ -215,7 +240,7 @@ export function createPointCloud(canvas: HTMLCanvasElement, bytes: ArrayBuffer) 
         gl.enableVertexAttribArray(destination);
         gl.vertexAttribPointer(destination, 2, gl.FLOAT, false, 0, 0);
       },
-      draw({ progress, flight, scale, next = 0, night = false, spin = 0, gather: fold = 0, rim = 0, fade = 1 }: PointPose) {
+      draw({ progress, flight, scale, next = 0, night = false, spin = 0, dissolve = 0 }: PointPose) {
         const focus = ramp(progress, 0, .42), zoom = ramp(progress, night ? .53 : .30, .82);
         const rad = Math.PI / 180, lon = (28 + 90*focus + spin)*rad, lat = (16 - 18.5*focus)*rad;
         const morph = zoom, radius = earthRadius(width, height, flight, night);
@@ -223,9 +248,9 @@ export function createPointCloud(canvas: HTMLCanvasElement, bytes: ArrayBuffer) 
         gl.uniform4f(pose, radius * (1 + .24 * zoom), scale, morph, nextBuffer ? Math.min(1,Math.max(0,next)) : 0);
         gl.uniform4f(light, flight, night ? 0 : daylightAt(flight), ratio, diameter);
         gl.uniform2f(scatter, night ? spread(progress)*Math.min(width,height)*.18 : 0, progress*12);
-        gl.uniform4f(gathered, fold, rim, fade, CORE);
+        gl.uniform1f(exit, dissolve);
         gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.POINTS, 0, budget);
+        if (dissolve < 1) gl.drawArrays(gl.POINTS, 0, budget);
       },
       dispose: release,
     };

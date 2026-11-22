@@ -22,7 +22,7 @@ type Pore = {
 };
 
 /** Only the band across the leading edge needs ink. Native scroll moves the rest. */
-export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement) {
+export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement, color = "#050507") {
   const ctx = canvas.getContext("2d");
   let w = 0, h = 0, view = 1, dpr = 1, rise = 0, tall = 0, pad = 1, swell = 0, nodes = 1;
   let p = -1, lastY = NaN, raf = 0, lastTime = 0, clock = 0, parked = -1;
@@ -142,7 +142,7 @@ export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement) 
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, tall);
-    ctx.fillStyle = "#050507";
+    ctx.fillStyle = color;
     const origin = rise - h * p;
     // The surface is still where the edge enters and where it seals the screen.
     const live = smooth(p / 0.12) * (1 - smooth((p - 0.82) / 0.18));
@@ -211,5 +211,13 @@ export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement) 
     }
     if (!raf) raf = requestAnimationFrame(tick);
   }
-  return { resize, scroll };
+  // The origin exit rewinds with the particles; sample the same ink by scroll, not by time.
+  function scrub(progress: number) {
+    if (!ctx || !w || progress === p) return;
+    p = progress;
+    clock = progress * 4;
+    step(0);
+    paint();
+  }
+  return { resize, scroll, scrub };
 }

@@ -2,7 +2,9 @@
 .stickyContainer { position: sticky; top: 0; width: 100%; height: 100dvh; overflow: hidden; }
 .field { position: absolute; inset: 0; pointer-events: none; }
 .field canvas { display: block; width: 100%; height: 100%; }
-.disc { position: absolute; inset: 0; background: #fff; clip-path: circle(var(--disc,0px) at 50% 52%); pointer-events: none; }
+.burn { position: absolute; inset: 0; transform: translateY(var(--burn-offset,100%)); pointer-events: none; }
+.burn::after { content: ""; position: absolute; inset: var(--burn-depth,0px) 0 -1px; background: #fff; }
+.burn canvas { position: absolute; top: calc(-1 * var(--burn-rise)); width: 100%; height: calc(var(--burn-rise) + var(--burn-depth) + 2px); }
 .global { position: absolute; left: 50%; top: 52%; width: var(--rim-size,0px); height: var(--rim-size,0px); transform: translate(-50%,-50%) rotate(var(--turn,0deg)); opacity: var(--global-copy,0); pointer-events: none; overflow: visible; }
 .global text { fill: #e6e6e4; font: 400 6.6px var(--font-google-sans-flex),sans-serif; letter-spacing: .02em; }
 .caption, .fallback { position: absolute; width: 100%; margin: 0; text-align: center; font-size: clamp(1rem,2vw,1.7rem); letter-spacing: -.025em; }
@@ -10,4 +12,4 @@
 .fallback { top: 46%; }
 @media (max-width: 480px), (max-height: 480px) { .global text { font-size: 10px; } }
 @media (max-height: 480px) { .global text { font-size: 12px; } }
-@media (prefers-reduced-motion: reduce) { .section { height: 100dvh; margin-top: 0; } .global, .disc { display: none; } .caption { opacity: 1; top: 78%; } }
+@media (prefers-reduced-motion: reduce) { .section { height: 100dvh; margin-top: 0; } .global, .burn { display: none; } .caption { opacity: 1; top: 78%; } }

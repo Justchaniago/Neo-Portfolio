@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { getPerformanceProfile, onPerformanceTierChange } from "@/lib/performanceTier";
 import styles from "./AsciiGlobeSection.module.css";
 import { ARRIVAL_END, arrivalAt, availableFlight, earthRadius, ramp as phase, sampleArrival, setArrivalReady } from "./globeArrival";
-import { CORE, createPointCloud, createPointFallback } from "./pointCloud";
+import { createPointCloud, createPointFallback } from "./pointCloud";
+import { createBurnEdge } from "./burnEdge";
 
-// Viewports of scroll after the map: its grains gather into one, which opens into the next page.
+// Keep the map exit inside its existing scroll distance.
 const TAIL = 1.9;
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
@@ -14,6 +15,7 @@ const clamp = (v: number) => Math.max(0, Math.min(1, v));
 export function AsciiGlobeSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLCanvasElement>(null);
   const captionRef = useRef<HTMLParagraphElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -22,7 +24,8 @@ export function AsciiGlobeSection() {
     const field = fieldRef.current;
     const caption = captionRef.current;
     const scroller = section?.closest<HTMLElement>("main");
-    if (!section || !field || !scroller || !caption) return;
+    if (!section || !field || !scroller || !caption || !edgeRef.current) return;
+    const burn = createBurnEdge(edgeRef.current, section, "#fff");
     const craft = section.previousElementSibling as HTMLElement | null;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const controller = new AbortController();
@@ -33,24 +36,24 @@ export function AsciiGlobeSection() {
     let target = 0, current = 0, raf = 0, last = 0;
     let visible = false, disposed = false, primed = false;
     let spin = 0;
-    let shownCopy = "", shownTurn = "", shownDisc = "", tail = 0, cover = 1;
+    let shownCopy = "", shownTurn = "", shownBurn = "", tail = 0;
     let craftTravel = 1, craftTop = 0, approach = 1, wantedApproach = 1, arrivalDistance = 0;
     const draw = (dt: number) => {
       const distance = current * travel, mapTravel = travel - tail;
       const p = reduced.matches ? 1 : clamp((distance - arrivalDistance) / Math.max(1, mapTravel - arrivalDistance));
-      const q = tail ? clamp((distance - mapTravel) / tail) : 0;
-      // A flick past the section must not leave a half-open disc scrolling away.
-      const grow = tail && target >= 1 ? 1 : clamp((q - .54) / .46);
-      const rim = grow ? CORE + cover * Math.pow(grow, 1.8) : 0;
+      const q = tail ? clamp((target * travel - mapTravel) / tail) : 0;
+      // The ink starts below the viewport; lead it in as the last grains fade.
+      const rise = phase(q,.47,1);
       const scale = Math.min((width - 32) / 50, Math.max(4, height - 150) / 22);
       const turning = !!cloud && !reduced.matches && approach >= .80 && p < .64;
       if (turning) spin = (spin + dt * .009 * phase(approach,.80,.99) * (1-phase(p,.40,.64))) % 360;
       cloud?.draw({
         progress: p, flight: approach, scale, night: true, spin,
-        gather: phase(q,.10,.52), rim, fade: 1 - phase(grow,.08,.50),
+        dissolve: clamp((q - .10) / .44),
       });
-      const disc = rim.toFixed(1);
-      if (disc !== shownDisc) section.style.setProperty("--disc", `${shownDisc = disc}px`);
+      const offset = ((1 - rise) * 100).toFixed(3);
+      if (offset !== shownBurn) section.style.setProperty("--burn-offset", `${shownBurn = offset}%`);
+      if (!reduced.matches) burn.scrub(rise);
       // The lettering travels clockwise along the rim with scroll, then leaves before the grains scatter.
       const copy = (phase(approach,.83,1) * (1-phase(p,.27,.40))).toFixed(3);
       const turn = (-46 + 16 * phase(approach,.80,1) + 96 * clamp(p / .40)).toFixed(2);
@@ -106,7 +109,7 @@ export function AsciiGlobeSection() {
       top = section.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       travel = Math.max(1, section.offsetHeight - height);
       tail = reduced.matches ? 0 : Math.min(height * TAIL, travel * .6);
-      cover = Math.hypot(width / 2, height * .52) + 4;
+      burn.resize(w, h, !reduced.matches);
       if (craft) {
         craftTravel = Math.max(1, craft.offsetHeight - height);
         craftTop = craft.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
@@ -205,7 +208,6 @@ export function AsciiGlobeSection() {
     <section ref={sectionRef} className={styles.section} data-home-chapter="ORIGIN" aria-label="Working globally, from Indonesia">
       <div className={styles.stickyContainer}>
         <div ref={fieldRef} className={styles.field} aria-hidden="true" />
-        <div className={styles.disc} aria-hidden="true" />
         <svg className={styles.global} viewBox="0 0 260 260" role="img" aria-label="Working globally, wherever you are.">
           <defs>
             <path id="origin-rim" d="M18 130a112 112 0 1 1 224 0a112 112 0 1 1 -224 0" />
@@ -219,6 +221,7 @@ export function AsciiGlobeSection() {
         </svg>
         <p ref={captionRef} className={styles.caption}>I lived in Indonesia.</p>
         {failed && <p className={styles.fallback}>Worldwide / Indonesia</p>}
+        <div className={styles.burn} aria-hidden="true"><canvas ref={edgeRef} /></div>
       </div>
     </section>
   );
