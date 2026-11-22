@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createBurnEdge } from "./burnEdge";
+import { ARRIVAL_READY, arrivalAt, availableFlight, HEADS_LANDED, ramp, sampleArrival, SKY_REVEALED } from "./globeArrival";
 import { createRadialBurst } from "./radialBurst";
 import styles from "./NarrativeSection.module.css";
 
@@ -148,16 +149,15 @@ export function NarrativeSection() {
       mouseVX *= Math.pow(0.85, dt * 60); mouseVY *= Math.pow(0.85, dt * 60);
       const reveal = ease(phase(p, 0.30, 0.46));
       const burstExit = ease(phase(taglineProgress, 0.66, 0.80));
-      const intensity = reveal * (1 - ease(phase(taglineProgress, 0.74, 0.84)));
-      const portalProgress = clamp((p - 0.72) / (0.95 - 0.72));
+      const destination = availableFlight(scroller, arrivalAt(target));
+      const flight = sampleArrival(scroller, destination, time);
 
-      burst.draw(dt, intensity, speed, smoothDirection, reveal, burstExit, portalProgress);
+      if (flight < SKY_REVEALED) burst.draw(dt, reveal, speed, smoothDirection, reveal, burstExit, flight);
 
       captions.forEach(caption => {
         const enter = ease(phase(taglineProgress, 0.40, 0.50));
         const leave = ease(phase(taglineProgress, 0.64, 0.75));
-        const visibilityAlpha = enter * (1 - leave);
-        // Scale up past the viewer (1.0 -> 1.22) as if the camera is flying forward through the tagline into the portal
+        const visibilityAlpha = enter * (1 - leave) * (1 - ramp(flight, 0, .08));
         const depthScale = 0.95 + enter * 0.05 + leave * leave * 0.22;
         caption.style.opacity = String(visibilityAlpha);
         caption.style.transform = `translate3d(0, ${((1 - enter) * 22 - leave * 26).toFixed(1)}px, 0) scale(${depthScale.toFixed(3)})`;
@@ -170,8 +170,7 @@ export function NarrativeSection() {
       if (hudRef.current) {
         hudRef.current.dataset.active = String(reading && p < 0.72);
       }
-      // Once the 3D portal opening has expanded beyond the viewport corners, fade out any remaining stage wrapper.
-      const stageFade = 1 - ease(phase(p, 0.93, 0.98));
+      const stageFade = 1 - ramp(flight, HEADS_LANDED, SKY_REVEALED);
       visual.style.opacity = String(stageFade);
       visual.style.pointerEvents = p >= 0.86 ? "none" : "auto";
       const leavingForward = direction > 0 && target >= READING_END && current >= READING_END - 0.012 && taglineProgress >= 0.69;
@@ -180,16 +179,23 @@ export function NarrativeSection() {
         readingDone = leavingForward;
         finishReading(current);
       }
-      if (intensity > 0 || (portalProgress > 0 && portalProgress < 1) || hasWordMotion || current !== target || speed > 0.001 || Math.abs(taglineProgress - p) > 0.002) {
+      if ((reveal > 0 && flight === 0) || hasWordMotion || current !== target || flight !== destination || Math.abs(taglineProgress - p) > 0.002) {
         raf = requestAnimationFrame(render);
       }
     };
     const wake = () => { if (!raf && visible && !reduced.matches && !document.hidden && !disposed) raf = requestAnimationFrame(render); };
     const scroll = () => {
       edge.scroll(clamp(1 + (scroller.scrollTop - top) / height), scroller.scrollTop);
-      if (reading) { wake(); return; }
-      const oldTarget = target;
       const nextTarget = clamp((scroller.scrollTop - top) / travel);
+      if (reading) {
+        // Hash navigation or a native jump can move even a locked scroller.
+        // Never drag that landing back into the reading interval.
+        if (nextTarget >= READING_START - .001 && nextTarget <= READING_END + .001) { wake(); return; }
+        finishReading();
+        readingDone = nextTarget > READING_END;
+        current = previous = taglineProgress = nextTarget;
+      }
+      const oldTarget = target;
       target = nextTarget;
       if (scroller.scrollTop <= 16) bypassReading = false;
       if (!reading && target < 0.3 && !bypassReading) readingDone = false;
@@ -297,6 +303,7 @@ export function NarrativeSection() {
     resize.observe(visual); resize.observe(element); resize.observe(copy); resize.observe(scroller);
     if (element.parentElement) resize.observe(element.parentElement);
     scroller.addEventListener("scroll", scroll, { passive: true });
+    scroller.addEventListener(ARRIVAL_READY, wake);
     scroller.addEventListener("wheel", wheel, { passive: false, capture: true });
     scroller.addEventListener("touchstart", touchStart, { passive: true, capture: true });
     scroller.addEventListener("touchmove", touchMove, { passive: false, capture: true });
@@ -318,6 +325,7 @@ export function NarrativeSection() {
       disposed = true; cancelAnimationFrame(raf); observer.disconnect(); resize.disconnect();
       finishReading();
       scroller.removeEventListener("scroll", scroll); visual.removeEventListener("pointermove", pointer);
+      scroller.removeEventListener(ARRIVAL_READY, wake);
       scroller.removeEventListener("wheel", wheel, true);
       scroller.removeEventListener("touchstart", touchStart, true);
       scroller.removeEventListener("touchmove", touchMove, true);
@@ -369,6 +377,7 @@ export function NarrativeSection() {
           </button>
         </div>
       </div>
+      <span id="star-arrival" className={styles.arrivalMark} aria-hidden="true" />
     </section>
   );
 }

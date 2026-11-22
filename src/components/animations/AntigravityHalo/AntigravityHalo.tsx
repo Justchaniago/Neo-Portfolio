@@ -234,8 +234,9 @@ export function AntigravityHalo({
     leaveTarget.addEventListener("pointerleave", handlePointerLeave);
 
     const scroller = container.closest("main");
+    const onScroll = () => { if (isVisible) syncRect(); };
     if (scroller) {
-      scroller.addEventListener("scroll", syncRect, { passive: true });
+      scroller.addEventListener("scroll", onScroll, { passive: true });
     }
 
     // Responsive Resize
@@ -461,7 +462,7 @@ export function AntigravityHalo({
       unsubscribePerf();
       splashObserver.disconnect();
       if (scroller) {
-        scroller.removeEventListener("scroll", syncRect);
+        scroller.removeEventListener("scroll", onScroll);
       }
       pointerTarget.removeEventListener("pointermove", handlePointerMove as EventListener);
       pointerTarget.removeEventListener("touchstart", handleTouchStart as EventListener);

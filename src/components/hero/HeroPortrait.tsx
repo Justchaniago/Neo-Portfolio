@@ -47,13 +47,6 @@ export function HeroPortrait() {
       context?.clearRect(0, 0, surface.width, surface.height);
     };
 
-    const loadImage = async (source: string) => {
-      const image = new window.Image();
-      image.src = source;
-      await image.decode();
-      return image;
-    };
-
     const play = async (from: 0 | 1, to: 0 | 1) => {
       if (disposed || !mobile.matches || mobileTransitioningRef.current) return;
       if (reduced.matches) {
@@ -64,10 +57,10 @@ export function HeroPortrait() {
       const currentRun = run + 1;
       run = currentRun;
       try {
-        const [fromImage, toImage] = await Promise.all([
-          loadImage(from === 0 ? "/hero-justchaniago.png" : "/hero-justchaniago-left.png"),
-          loadImage(to === 0 ? "/hero-justchaniago.png" : "/hero-justchaniago-left.png"),
-        ]);
+        // Draw the same responsive images already on screen, not two more full-size PNGs.
+        const images = portrait.querySelectorAll("img");
+        const fromImage = images[from], toImage = images[to];
+        await Promise.all([fromImage.decode(), toImage.decode()]);
         if (disposed || currentRun !== run || !mobile.matches) return;
 
         const rect = portrait.getBoundingClientRect();

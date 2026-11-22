@@ -27,7 +27,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   metadataBase: new URL("https://chaniago.me"),
   title: "chaniago.me — Creative Software Engineer",
-  description: "Portfolio of Chaniago — Freelance Software Engineer, Creative Developer, and Systems Architect based in Surabaya, Indonesia.",
+  description: "Portfolio of Chaniago — Founder of Chaniago Labs, Creative Developer, and Systems Architect based in Surabaya, Indonesia.",
 };
 
 export const viewport: Viewport = {

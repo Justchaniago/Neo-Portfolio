@@ -30,7 +30,7 @@ function getLocalFallbackReply(prompt: string): string {
     return "TypeScript, React, Next.js, Node.js, and WebGL/GSAP for interactive interfaces paired with scalable backend architecture.";
   }
   if (q.includes("available") || q.includes("work") || q.includes("freelance") || q.includes("hire")) {
-    return "Available for select freelance collaborations and senior engineering roles — reach out directly at hello@chaniago.me.";
+    return "Open for select client projects and digital creative work through Chaniago Labs — reach out at hello@chaniago.me.";
   }
   if (q.includes("project") || q.includes("built")) {
     return "Focused on high-craft web applications, spatial & motion-rich interfaces, and end-to-end product systems.";

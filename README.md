@@ -1,13 +1,13 @@
 # chaniago.me (`neo-portfolio`)
 
-Interactive, mobile-first portfolio of **Just Chaniago** — Freelance Software Engineer, Creative Developer, and Systems Architect based in Surabaya, Indonesia.
+Interactive, mobile-first portfolio of **Just Chaniago** — Founder of Chaniago Labs, Creative Developer, and Systems Architect based in Surabaya, Indonesia.
 
 ## Key Highlights
 
 - **Three-Stage Splash Intro**: SVG glyph meniscus reveal (`justchaniago`), identity shift to `chaniago.me`, and full-resolution circular portal handoff.
 - **Interactive WebGL & 2D Canvas**:
   - Custom Three.js shader particle ring (`AntigravityHalo`) with Poisson-disc distribution and analytical pointer tracking.
-  - Scroll-driven narrative scatter, radial star-burst (`radialBurst`), and interactive orthographic-to-equirectangular ASCII globe (`AsciiGlobeSection` + `asciiSweep`).
+  - Starburst streaks shorten into a night sky and gather into a slowly rotating globe. Two lines travel clockwise along its rim with scroll, which then scatters the grains before they settle into Indonesia on black, without a location pin. The map then spirals into one grain, which opens as a white disc into the closing tagline.
 - **Card-Stack Overlay Navigation**: Smooth GSAP-driven sheet transitions (`StackSection`) for `Projects`, `About`, and `Contact` alongside a `Cmd/Ctrl + K` Command Palette.
 - **Adaptive Performance Engine (`src/lib/performanceTier.ts`)**: Hardware/WebGL capability detection + real-time FPS monitoring that dynamically scales DPR, shader density, canvas resolution, and compositor filters across Chrome, Safari, and Windows/macOS devices.
 
@@ -37,7 +37,7 @@ neo-portfolio/
     │   ├── hero/                # Dual-layer iris portrait & curved mobile Saturn tagline
     │   ├── hud/                 # Spatial scroll chapter indicator
     │   ├── layout/              # Reusable draggable/animated StackSection sheet
-    │   ├── narrative/           # Narrative scatter, radial burst, ASCII globe & footer reveal
+    │   ├── narrative/           # Narrative scatter, radial burst, point globe & footer reveal
     │   ├── pages/               # About & Contact card-stack experiences
     │   ├── projects/            # Interactive project rail & detail showcase
     │   └── splash-screen/       # Three-stage splash screen & portal reveal

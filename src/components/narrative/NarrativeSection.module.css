@@ -21,6 +21,8 @@
 }
 
 .burnEdge { display: none; }
+.arrivalMark { position: absolute; top: calc(77% - 77dvh); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .arrivalMark { top: auto; bottom: 0; } }
 @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
   .section[data-burn-ready] .stage { border-radius: 0; box-shadow: none; }
   .section[data-burning] .stage {
@@ -155,45 +157,6 @@
   color: #f4ead8;
 }
 
-.window {
-  --arch-w: clamp(136px, 22vw, 240px);
-  --arch-h: calc(var(--arch-w) * 1.24);
-  position: absolute;
-  z-index: 10;
-  left: 50%;
-  bottom: 0;
-  /* Lock arch aspect ratio (1 : 1.24) so mobile never stretches into a skinny tube */
-  width: var(--arch-w);
-  height: var(--arch-h);
-  border-radius: 999px 999px 0 0;
-  background: #ffffff;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.22),
-    0 -14px 36px rgb(95 226 239 / 0.18),
-    0 -4px 18px rgb(255 255 255 / 0.25);
-  opacity: 0;
-  visibility: hidden;
-  transform: translate3d(-50%, 108%, 0) scale3d(1, 1, 1);
-  transform-origin: center bottom;
-}
-
-.section[data-visible="true"] .window {
-  will-change: transform, opacity;
-}
-
-:global(html[data-perf-tier="low"]) .window,
-:global(html[data-perf-tier="medium"]) .window,
-:global(html[data-browser-engine="webkit"]) .window {
-  box-shadow: none;
-}
-
-@media (max-width: 767px) {
-  .window {
-    --arch-w: clamp(150px, 42vw, 196px);
-    --arch-h: calc(var(--arch-w) * 1.22);
-  }
-}
-
 @media (max-width: 767px) {
   .section { min-height: 520svh; }
   .copy {
@@ -210,7 +173,7 @@
   .stage { position: relative; height: auto; padding: 80px 0; overflow: visible; gap: 64px; opacity: 1 !important; }
   .copy { transform: none !important; opacity: 1 !important; padding-top: 0; }
   .word { transform: none !important; will-change: auto; }
-  .burst, .window { display: none; }
+  .burst { display: none; }
   .taglines { position: relative; gap: 56px; }
   .tagline { grid-area: auto; opacity: 1 !important; transform: none !important; }
 }

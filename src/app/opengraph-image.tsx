@@ -68,7 +68,7 @@ export default function OpenGraphImage() {
               marginTop: "12px",
             }}
           >
-            Freelance Software Engineer &amp; Creative Technologist
+            Founder of Chaniago Labs &amp; Creative Technologist
           </div>
         </div>
 

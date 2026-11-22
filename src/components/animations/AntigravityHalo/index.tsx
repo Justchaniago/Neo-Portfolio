@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getPerformanceProfile, onPerformanceTierChange } from "@/lib/performanceTier";
 import type { AntigravityHaloProps } from "./AntigravityHalo";
 
@@ -13,14 +13,16 @@ const WebGLHalo = dynamic(
 export function AntigravityHalo(props: AntigravityHaloProps) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [splashComplete, setSplashComplete] = useState(false);
+  const placeholder = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let profile = getPerformanceProfile();
     let splashObserver: MutationObserver | null = null;
+    let near = props.pointerScope !== "local";
 
     const sync = () => {
-      const allowed = profile.tier !== "low" && !reducedMotion.matches;
+      const allowed = near && profile.tier !== "low" && !reducedMotion.matches;
       setIsEnabled(allowed);
       setSplashComplete(allowed && document.documentElement.dataset.splashComplete === "true");
       if (document.documentElement.dataset.splashComplete === "true") {
@@ -28,6 +30,16 @@ export function AntigravityHalo(props: AntigravityHaloProps) {
         splashObserver = null;
       }
     };
+
+    const footer = placeholder.current?.closest("[data-home-chapter]");
+    const proximity = !near && footer ? new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      near = true;
+      proximity?.disconnect();
+      sync();
+    }, { root: footer.closest("main"), rootMargin: "100% 0px" }) : null;
+    if (proximity && footer) proximity.observe(footer);
+    else near = true;
 
     if (document.documentElement.dataset.splashComplete === "true") {
       sync();
@@ -48,14 +60,16 @@ export function AntigravityHalo(props: AntigravityHaloProps) {
 
     return () => {
       splashObserver?.disconnect();
+      proximity?.disconnect();
       unsubscribe();
       reducedMotion.removeEventListener("change", sync);
     };
-  }, []);
+  }, [props.pointerScope]);
 
   if (!isEnabled || !splashComplete) {
     return (
       <div
+        ref={placeholder}
         className={`relative h-full w-full overflow-hidden ${props.className ?? ""}`}
         aria-hidden="true"
       >

@@ -24,7 +24,8 @@ Semua UI dan animasi wajib mengikuti [Mobile & Animation Guide](MOBILE_GUIDE.md)
 | **Timelines & Transitions** | **GSAP 3** | Timeline splash screen, iris reveal pada potret hero, transisi *card-stack* (`Projects`, `About`, `Contact`), dan wordmark footer. |
 | **Smooth Scrolling** | **Lenis** | *Smooth wheel/touch scrolling* dengan sinkronisasi *scroll lock* saat overlay atau mode baca aktif. |
 | **WebGL Shader** | **Three.js** | `AntigravityHalo` — ribuan partikel *Poisson-disc* dengan custom vertex/fragment shader dan proyeksi kursor analitis. |
-| **2D Canvas Engines** | **HTML5 Canvas 2D** | `radialBurst` (warp bintang), `AsciiGlobeSection` + `asciiSweep` (proyeksi bola dunia ke peta Indonesia), dan transisi piksel potret mobile. |
+| **Point cloud** | **WebGL (`POINTS`)** | `pointCloud`: titik dengan ID tetap, dari permukaan globe ke kepulauan Indonesia dalam satu draw call. Tujuan berikutnya memakai urutan ID yang sama. |
+| **2D Canvas Engines** | **HTML5 Canvas 2D** | `radialBurst` (warp bintang), fallback point cloud, dan transisi piksel potret mobile. |
 | **Web Audio** | **Web Audio API** | `AmbientToggle` — visualisasi gelombang *real-time* (`AnalyserNode`) dan sintesis efek suara UI pentatonik. |
 | **Adaptive Performance** | **`performanceTier.ts`** | Deteksi kapabilitas GPU/CPU/Browser (Chrome, Safari WebKit, Windows) + pemantauan FPS *real-time* untuk menyesuaikan DPR, kepadatan partikel, dan efek *filter/blur*. |
 

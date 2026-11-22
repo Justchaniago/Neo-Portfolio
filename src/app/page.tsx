@@ -253,10 +253,10 @@ export default function Home() {
         <div className={styles.heroCopy}>
           <span className={styles.heroArrow} aria-hidden="true">↘</span>
           <p className={styles.heroLineMask}>
-            <span className={styles.heroLine} style={{ "--line-index": 0 } as CSSProperties}>Freelance</span>
+            <span className={styles.heroLine} style={{ "--line-index": 0 } as CSSProperties}>Founder</span>
           </p>
           <p className={styles.heroLineMask}>
-            <span className={styles.heroLine} style={{ "--line-index": 1 } as CSSProperties}>Software Engineer</span>
+            <span className={styles.heroLine} style={{ "--line-index": 1 } as CSSProperties}>Chaniago Labs</span>
           </p>
         </div>
 

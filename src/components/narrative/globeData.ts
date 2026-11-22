@@ -18,9 +18,15 @@ export function createLandSampler(polygons: LandPolygon[]) {
     ctx.fillStyle=polygon.indonesia ? "#00ff00" : "#ff0000";
     ctx.fill("evenodd");
   }
-  const pixels=ctx.getImageData(0,0,3600,1800).data;
   const mask=new Uint8Array(3600*1800);
-  for(let i=0;i<mask.length;i++) mask[i]=pixels[i*4+3]>80 ? (pixels[i*4+1]>128 ? 2:1):0;
+  // Keep the browser's native coastline rasterization, without a second 26 MB bitmap.
+  for (let y = 0; y < atlas.height; y += 64) {
+    const pixels = ctx.getImageData(0, y, atlas.width, Math.min(64, atlas.height - y)).data;
+    const start = y * atlas.width;
+    for (let i = 0; i < pixels.length; i += 4) {
+      mask[start + i / 4] = pixels[i + 3] > 80 ? (pixels[i + 1] > 128 ? 2 : 1) : 0;
+    }
+  }
   atlas.width=atlas.height=1;
   return (lon:number,lat:number) => {
     if(lat < -90 || lat > 90) return 0;
