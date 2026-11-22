@@ -34,11 +34,7 @@ export function CommandPalette() {
   const [routeAfterClose, setRouteAfterClose] = useState<string | null>(null);
 
   const dispatchCommand = (id: CommandItem["id"]) => {
-    if (id === "projects") {
-      if (document.documentElement.dataset.projectsActive !== "true") {
-        window.dispatchEvent(new CustomEvent("portfolio:request-section", { detail: { section: "project" } }));
-      }
-    } else if (id === "about" || id === "contact") {
+    if (id === "about" || id === "contact") {
       if (document.documentElement.dataset.staticSection !== id) {
         window.dispatchEvent(new CustomEvent("portfolio:request-section", { detail: { section: id } }));
       }
@@ -59,11 +55,11 @@ export function CommandPalette() {
     if (closing) return;
     let route: string | null = null;
     if (actionToRun) {
-      const projectSlug = pathname.startsWith("/projects/") ? pathname.split("/")[2] : "";
       if (pathname !== "/" && actionToRun === "home") {
         route = "/";
-      } else if (pathname !== "/" && actionToRun === "projects") {
-        route = projectSlug ? `/?section=project&project=${projectSlug}` : "/?section=project";
+      } else if (actionToRun === "projects") {
+        if (pathname === "/projects") window.location.hash = "work";
+        else route = "/projects";
       } else if (pathname !== "/" && (actionToRun === "about" || actionToRun === "contact")) {
         route = `/?section=${actionToRun}`;
       } else {
@@ -107,7 +103,7 @@ export function CommandPalette() {
             const label =
               route === "/"
                 ? "CHANIAGO.ME"
-                : route.includes("section=project")
+                : route === "/projects"
                   ? "INDEX / PROJECTS"
                   : route.includes("section=about")
                     ? "02 — ABOUT"

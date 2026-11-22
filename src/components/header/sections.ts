@@ -6,16 +6,12 @@ export const headerSections = [
 
 export type HeaderSection = typeof headerSections[number];
 
-export function sectionHref(name: HeaderSection["name"], pathname: string) {
-  const params = new URLSearchParams({ section: name });
-  if (name === "project" && pathname.startsWith("/projects/")) {
-    params.set("project", pathname.split("/")[2]);
-  }
-  return `/?${params}`;
+export function sectionHref(name: HeaderSection["name"]) {
+  return name === "project" ? "/projects" : `/?section=${name}`;
 }
 
 export function currentSection(pathname: string) {
-  if (pathname.startsWith("/projects/")) return "project";
+  if (pathname === "/projects" || pathname.startsWith("/projects/")) return "project";
   const { staticSection, projectsActive } = document.documentElement.dataset;
   return staticSection || (projectsActive === "true" ? "project" : "hero");
 }

@@ -104,14 +104,15 @@ export function HeaderNav() {
             key={item.name}
             className={styles.navLink}
             data-section={item.name}
-            href={sectionHref(item.name, pathname)}
+            href={sectionHref(item.name)}
             data-project-link={item.name === "project" ? "true" : undefined}
             aria-current={item.name === activeSection ? "location" : undefined}
             onClick={(event) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
               event.preventDefault();
-              if (pathname !== "/") {
-                const href = sectionHref(item.name, pathname);
+              if (pathname !== "/" || item.name === "project") {
+                const href = sectionHref(item.name);
+                if (href === pathname) { window.location.hash = "work"; return; }
                 triggerRouteTransition({
                   href,
                   label: item.transition,

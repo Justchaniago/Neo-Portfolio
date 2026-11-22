@@ -28,7 +28,7 @@ export function ProjectCaseStudy({ project, prevProject, nextProject }: Props) {
   const progressRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  const backHref = `/?section=project&project=${project.slug}`;
+  const backHref = `/projects#${project.slug}`;
   const prevHref = `/projects/${prevProject.slug}`;
   const nextHref = `/projects/${nextProject.slug}`;
 

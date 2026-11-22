@@ -63,8 +63,9 @@ export function MobileNav() {
     closeTimer.current = setTimeout(() => {
       setOpen(false);
       if (!section) return;
-      if (pathname !== "/") {
-        const href = sectionHref(section.name, pathname);
+      if (pathname !== "/" || section.name === "project") {
+        const href = sectionHref(section.name);
+        if (href === pathname) { window.location.hash = "work"; return; }
         triggerRouteTransition({ href, label: section.transition, navigate: () => router.push(href) });
       } else {
         window.dispatchEvent(new CustomEvent("portfolio:request-section", { detail: { section: section.name } }));
@@ -135,7 +136,7 @@ export function MobileNav() {
                 className={styles.link}
                 data-active={activeSection === section.name}
                 style={{ "--item-index": itemIndex } as CSSProperties}
-                href={sectionHref(section.name, pathname)}
+                href={sectionHref(section.name)}
                 aria-current={activeSection === section.name ? "location" : undefined}
                 onClick={event => {
                   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

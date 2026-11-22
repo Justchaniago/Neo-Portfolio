@@ -88,7 +88,7 @@ export function TheCutSection() {
                 <span key={index} data-cut-token>{token} </span>
               ))}
             </p>
-            <a ref={linkRef} className={styles.contact} data-cut-contact href={sectionHref("contact", "/")}
+            <a ref={linkRef} className={styles.contact} data-cut-contact href={sectionHref("contact")}
               onClick={event => {
                 if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                 event.preventDefault();

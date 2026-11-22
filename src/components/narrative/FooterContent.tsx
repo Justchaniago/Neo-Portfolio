@@ -5,7 +5,7 @@ import styles from "./FooterContent.module.css";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
 
 const pages = [
-  { label: "Project", section: "project", href: "#projects-layer" },
+  { label: "Project", section: "project", href: "/projects" },
   { label: "About", section: "about", href: "#about" },
   { label: "Contact", section: "contact", href: "#contact" },
 ];
@@ -80,7 +80,7 @@ export function FooterContent() {
           {pages.map(page => (
             <a key={page.section} className={styles.link} href={page.href}
               onClick={event => {
-                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                if (page.section === "project" || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                 event.preventDefault();
                 window.dispatchEvent(new CustomEvent("portfolio:request-section", {
                   detail: { section: page.section },
