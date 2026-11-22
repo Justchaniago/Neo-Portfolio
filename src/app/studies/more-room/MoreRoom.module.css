@@ -1,0 +1,213 @@
+.reader {
+  --ink: #16181a;
+  --red: #a01838;
+  --edge: clamp(22px, 6vw, 112px);
+  height: 100dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  color: var(--ink);
+}
+.reader:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
+}
+.reader a:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 4px;
+}
+.stage {
+  position: relative;
+  padding: max(112px, 18vh) var(--edge) 96px;
+}
+.title {
+  margin: 0;
+  font-family: var(--font-google-sans-flex), system-ui, sans-serif;
+  font-size: clamp(2.4rem, 7vw, 8.4rem);
+  font-weight: 480;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+.mark {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  vertical-align: baseline;
+}
+.period {
+  color: var(--red);
+}
+.body {
+  max-width: 40ch;
+  margin-top: clamp(24px, 3.6vh, 44px);
+}
+.body p {
+  margin: 0;
+  color: #45484c;
+  font-size: clamp(1rem, 1.25vw, 1.3rem);
+  line-height: 1.5;
+  letter-spacing: -0.015em;
+}
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 44px;
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  font-weight: 520;
+  letter-spacing: -0.02em;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.32em;
+}
+.link span {
+  color: var(--red);
+  transition: transform 0.22s ease;
+}
+@media (hover: hover) {
+  .link:hover span {
+    transform: translate(2px, -2px);
+  }
+}
+.closing {
+  display: grid;
+  align-items: center;
+  min-height: 100dvh;
+  padding: 72px var(--edge);
+}
+.closing h2 {
+  margin: 0;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(2.6rem, 8vw, 9.5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.065em;
+}
+.closing a {
+  text-decoration: underline;
+  text-decoration-thickness: 0.03em;
+  text-underline-offset: 0.12em;
+}
+.field,
+.pin,
+.origin {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .reader[data-motion] .track {
+    height: 360dvh;
+  }
+  .reader[data-motion] .stage {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    padding: 0;
+    overflow: clip;
+    isolation: isolate;
+  }
+  .reader[data-motion] .field {
+    position: absolute;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+  }
+  .field canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .reader[data-motion] .copy {
+    position: absolute;
+    top: 50%;
+    right: var(--edge);
+    left: var(--edge);
+    transform: translateY(-50%);
+  }
+  .reader[data-motion] .title {
+    opacity: var(--title, 0);
+    font-variation-settings: "wdth" var(--wdth, 100);
+    letter-spacing: calc(var(--track, -0.035) * 1em);
+  }
+  /* Width changes on scroll: a word must never move to another line mid-animation. */
+  .reader[data-motion] .row {
+    display: block;
+    white-space: nowrap;
+  }
+  .reader[data-motion] .period {
+    visibility: hidden;
+  }
+  .reader[data-motion] .body {
+    opacity: var(--body, 0);
+    transform: translateY(calc((1 - var(--body, 0)) * 22px));
+    pointer-events: none;
+  }
+  .reader[data-ready] .body {
+    pointer-events: auto;
+  }
+  .reader[data-motion] .pin {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: var(--pin-size, 6px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--red);
+    transform: translate3d(calc(var(--pin-x, 0px) - 50%), calc(var(--pin-y, 0px) - 50%), 0);
+    pointer-events: none;
+  }
+  .reader[data-motion] .origin {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    opacity: var(--origin, 1);
+    transform: translate3d(calc(var(--pin-x, 0px) - 50%), calc(var(--pin-y, 0px) + 12px), 0);
+    padding: 3px 6px;
+    background: #fff;
+    color: var(--red);
+    font: 600 0.65rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+}
+@media (min-width: 740px) {
+  .reader[data-motion] .body {
+    margin-left: 50%;
+    max-width: 38ch;
+  }
+}
+@media (max-width: 739px) and (orientation: portrait) {
+  .title {
+    font-size: clamp(2.4rem, 12.6vw, 4.6rem);
+  }
+  .reader[data-motion] .row > span:not(.period) {
+    display: block;
+  }
+}
+@media (max-height: 475px) and (orientation: landscape) {
+  .title {
+    font-size: min(7vw, 11.5dvh);
+  }
+  .reader[data-motion] .copy {
+    top: 56%;
+  }
+  .body {
+    margin-top: 14px;
+  }
+  .body p {
+    font-size: 0.875rem;
+    line-height: 1.42;
+  }
+  .link {
+    margin-top: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .link span {
+    transition: none;
+  }
+}

@@ -28,21 +28,6 @@
   animation: ambientEntrance 950ms cubic-bezier(0.16, 1, 0.3, 1) 940ms forwards;
 }
 
-:global(html[data-header-compact="true"]) .toggle:not([data-playing="true"]) {
-  pointer-events: none;
-}
-
-:global(html[data-header-compact="true"]) .toggle:not([data-playing="true"]) .lineWrap {
-  opacity: 0;
-  transform: translate3d(0, -16px, 0);
-}
-
-:global(html[data-header-compact="true"]) .toggle:not([data-playing="true"]) .labelContainer {
-  animation: none;
-  opacity: 0;
-  transform: translate3d(0, -16px, 0);
-}
-
 @keyframes ambientEntrance {
   0% {
     opacity: 0;

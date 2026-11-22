@@ -16,38 +16,33 @@ export function HeaderNav() {
     if (!scroller) return;
 
     const mobile = window.matchMedia("(max-width: 767px)");
-    let previousScrollTop = scroller.scrollTop;
-    let hasMeasured = false;
+    let turnAt = scroller.scrollTop;
     let collapsed = false;
     let currentActiveSection = "";
-    let isScrollerScrollable = scroller.scrollHeight > scroller.clientHeight + 1;
+    let limit = scroller.scrollHeight - scroller.clientHeight;
 
     const update = () => {
-      const currentScrollTop = scroller.scrollTop;
+      const y = Math.max(0, Math.min(limit, scroller.scrollTop));
       const section = currentSection(pathname);
       const layerActive = (pathname === "/" && section !== "hero")
         || document.documentElement.dataset.overlayOpen === "true"
         || Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001
         || Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001;
-      const sectionScrollable = !layerActive && isScrollerScrollable;
       const threshold = mobile.matches ? 24 : 40;
-      const delta = currentScrollTop - previousScrollTop;
-      const movingDown = delta > 2;
-      const movingUp = delta < -2;
 
       let next = collapsed;
-      if (!sectionScrollable || currentScrollTop <= threshold) {
+      if (layerActive || y <= threshold) {
         next = false;
-      } else if (!hasMeasured) {
-        next = true;
-      } else if (movingDown) {
-        next = true;
-      } else if (movingUp) {
-        next = false;
+        turnAt = y;
+      } else {
+        // Measure from the last turn, not the previous Lenis frame.
+        turnAt = collapsed ? Math.max(turnAt, y) : Math.min(turnAt, y);
+        if (collapsed ? turnAt - y >= 6 : y - turnAt >= 12) {
+          next = !collapsed;
+          turnAt = y;
+        }
       }
 
-      previousScrollTop = currentScrollTop;
-      hasMeasured = true;
       if (section !== currentActiveSection) {
         currentActiveSection = section;
         setActiveSection(section);
@@ -74,7 +69,7 @@ export function HeaderNav() {
     };
 
     const measureAndUpdate = () => {
-      isScrollerScrollable = scroller.scrollHeight > scroller.clientHeight + 1;
+      limit = scroller.scrollHeight - scroller.clientHeight;
       update();
     };
 
