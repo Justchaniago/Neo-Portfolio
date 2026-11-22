@@ -25,7 +25,7 @@ type Pore = {
 export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement) {
   const ctx = canvas.getContext("2d");
   let w = 0, h = 0, view = 1, dpr = 1, rise = 0, tall = 0, pad = 1, swell = 0, nodes = 1;
-  let p = -1, lastY = NaN, raf = 0, lastTime = 0, clock = 0;
+  let p = -1, lastY = NaN, raf = 0, lastTime = 0, clock = 0, parked = -1;
   let xs = new Float32Array(0), rest = xs, rim = xs, at = xs;
   let d = xs, v = xs, pull = xs, surface = xs;
   let pores: Pore[] = [];
@@ -41,7 +41,8 @@ export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement) 
       calm();
       delete section.dataset.burnReady;
       delete section.dataset.burning;
-      p = -1; lastY = NaN;
+      delete section.dataset.burnSealed;
+      p = parked = -1; lastY = NaN;
       return;
     }
     const perf = getPerformanceProfile();
@@ -51,7 +52,7 @@ export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement) 
     view = viewHeight;
     if (width === w && h === depth && dpr === ratio) return;
     calm();
-    w = width; h = depth; dpr = ratio; p = -1; lastY = NaN;
+    w = width; h = depth; dpr = ratio; p = parked = -1; lastY = NaN;
     pad = Math.max(20, Math.min(46, Math.round(h * 0.28)));
     swell = h * 0.18;
     const shore = (x: number) => {
@@ -190,8 +191,14 @@ export function createBurnEdge(canvas: HTMLCanvasElement, section: HTMLElement) 
     p = progress;
     if (p <= 0 || p >= 1) {
       if (section.hasAttribute("data-burning")) { delete section.dataset.burning; calm(); }
+      // Scroll events can arrive a frame after the page has moved (Safari). Leave the band
+      // painted for this end and keep it on screen, so that frame never shows a bare seam.
+      if (parked !== p) { paint(); parked = p; }
+      section.toggleAttribute("data-burn-sealed", p >= 1);
       return;
     }
+    parked = -1;
+    delete section.dataset.burnSealed;
     if (jump) calm();
     else if (!entering && delta) {
       for (let i = 0; i <= nodes; i++) d[i] = Math.max(-pad * 2, Math.min(pad * 2, d[i] + delta * LAG * pull[i]));

@@ -1,3 +1,18 @@
+/* On scroll the Hero lifts off the drawing as one sheet: slightly smaller, lower corners rounded.
+   Its shadow is `.heroShade` in the Blueprint section, on the same progress. */
+.heroSheet {
+  --lift: var(--hero-scroll-progress, 0);
+  --lift-corner: calc(min(1, var(--lift) * 6) * clamp(18px, 3.2vw, 40px));
+  background: #fff;
+  border-radius: 0 0 var(--lift-corner) var(--lift-corner);
+  transform: scale(calc(1 - 0.06 * var(--lift) * (2 - var(--lift))));
+  transform-origin: 50% 100%;
+}
+
+.heroSheet[data-lifting] {
+  will-change: transform;
+}
+
 .portraitParallax {
   pointer-events: none;
   transform: translate3d(0, var(--portrait-offset, 0px), 0) scale(calc(1 - var(--hero-scroll-progress, 0) * 0.04));

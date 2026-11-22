@@ -25,11 +25,25 @@
 @media (prefers-reduced-motion: reduce) { .arrivalMark { top: auto; bottom: 0; } }
 @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
   .section[data-burn-ready] .stage { border-radius: 0; box-shadow: none; }
-  .section[data-burning] .stage {
+  /* Open is the default: the stage is cut along the band until the edge has sealed the screen.
+     Nothing here waits for a scroll event, which can arrive a frame after the page has moved. */
+  .section[data-burn-ready]:not([data-burn-sealed]) .stage {
     clip-path: inset(var(--burn-depth) 0 0);
     background: #050507;
   }
-  .section[data-burning] .burnEdge {
+  /* Ink under the stage, moving with the section. If the stage has already pinned while the
+     band scrolled on, this fills the strip between them. */
+  .section[data-burn-ready]:not([data-burn-sealed])::before {
+    content: "";
+    position: absolute;
+    top: var(--burn-depth);
+    right: 0;
+    left: 0;
+    height: 100dvh;
+    background: #050507;
+    pointer-events: none;
+  }
+  .section[data-burn-ready] .burnEdge {
     display: block;
     position: absolute;
     z-index: 1;

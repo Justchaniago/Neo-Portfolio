@@ -11,6 +11,11 @@ import { PROJECTS } from "@/lib/projects";
 import { getPerformanceProfile } from "@/lib/performanceTier";
 import styles from "./Home.module.css";
 
+// One smoothing constant for wheel, keys and hand-offs, so they share a feel.
+const SCROLL_LERP = 0.085;
+// Slow in, slow out: a long jump starts and lands gently instead of at full speed.
+const glide = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
 export default function Home() {
   const pathname = usePathname();
   const page = useRef<HTMLElement>(null);
@@ -72,6 +77,9 @@ export default function Home() {
     const heroBox = heroSurface.current;
     const layer = portraitLayer.current;
     if (!scroller || !heroBox || !layer) return;
+    // The lifted Hero casts its shadow from inside the Blueprint section; both read one progress.
+    const shade = scroller.querySelector<HTMLElement>("[data-hero-shade]");
+    const sheets = shade ? [heroBox, shade] : [heroBox];
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const scrollLocks = new Set<string>();
@@ -90,9 +98,13 @@ export default function Home() {
         lastOffset = offset;
         layer.style.setProperty("--portrait-offset", `${offset.toFixed(2)}px`);
       }
-      if (Math.abs(progress - lastProgress) > 0.0005) {
+      const settled = progress === 0 || progress === 1;
+      if (Math.abs(progress - lastProgress) > 0.0005 || (settled && progress !== lastProgress)) {
         lastProgress = progress;
-        heroBox.style.setProperty("--hero-scroll-progress", progress.toFixed(4));
+        for (const sheet of sheets) {
+          sheet.style.setProperty("--hero-scroll-progress", progress.toFixed(4));
+          sheet.toggleAttribute("data-lifting", !settled);
+        }
       }
 
       const scrolling = String(clampedScroll > 1);
@@ -138,8 +150,31 @@ export default function Home() {
       } else {
         scroller.style.removeProperty("overflow-y");
         lenisRef.current?.start();
+        // Lenis measures time between its own frames. After a pause, tell it the time now,
+        // or a scroll started this frame would cover the whole pause in one step.
+        lenisRef.current?.raf(performance.now());
         startRaf();
       }
+    };
+
+    // Sections that pace the scroll themselves stand aside while the page travels.
+    let travelling = false;
+    const announceTravel = (active: boolean) => {
+      if (travelling === active) return;
+      travelling = active;
+      window.dispatchEvent(new CustomEvent("portfolio:scroll-travel", { detail: { active } }));
+    };
+    // Any scroll of the visitor's own ends the travel, whether or not it had landed.
+    const endTravel = () => announceTravel(false);
+    // Long jumps take a little longer, but never start or stop abruptly.
+    const travelTo = (to: number) => {
+      const lenis = lenisRef.current;
+      if (!lenis || Math.abs(to - lenis.scroll) < 1) return;
+      const screens = Math.abs(to - lenis.scroll) / viewportHeight;
+      announceTravel(true);
+      lenis.scrollTo(to, reduced.matches
+        ? { immediate: true, force: true, onComplete: endTravel }
+        : { duration: Math.min(1.8, 0.7 + screens * 0.06), easing: glide, force: true, onComplete: endTravel });
     };
 
     const goHome = () => {
@@ -152,10 +187,7 @@ export default function Home() {
         scroller.scrollTop = 0;
         lenisRef.current?.scrollTo(0, { immediate: true, force: true });
       } else if (lenisRef.current) {
-        lenisRef.current.scrollTo(0, {
-          duration: reduced.matches ? 0 : 1.15,
-          force: true,
-        });
+        travelTo(0);
       } else {
         scroller.scrollTo({ top: 0, behavior: reduced.matches ? "auto" : "smooth" });
       }
@@ -188,7 +220,10 @@ export default function Home() {
         reduced.removeEventListener("change", update);
         resizeObserver.disconnect();
         delete document.documentElement.dataset.heroScrolling;
-        heroBox.style.removeProperty("--hero-scroll-progress");
+        for (const sheet of sheets) {
+          sheet.style.removeProperty("--hero-scroll-progress");
+          sheet.removeAttribute("data-lifting");
+        }
       };
     }
 
@@ -198,7 +233,7 @@ export default function Home() {
       autoRaf: false,
       smoothWheel: true,
       syncTouch: true,
-      lerp: 0.085,
+      lerp: SCROLL_LERP,
     });
     lenisRef.current = lenis;
     if (scrollLocks.size > 0) lenis.stop();
@@ -206,6 +241,44 @@ export default function Home() {
       syncHeroScroll(instance.scroll);
     };
     lenis.on("scroll", onLenisScroll);
+
+    // A section that paced the scroll itself hands its speed back here.
+    const carry = (event: Event) => {
+      const velocity = (event as CustomEvent<{ velocity?: number }>).detail?.velocity;
+      if (!velocity || scrollLocks.size > 0) return;
+      const ahead = lenis.scroll + velocity / (60 * SCROLL_LERP);
+      lenis.scrollTo(Math.max(0, Math.min(lenis.limit, ahead)));
+    };
+    window.addEventListener("portfolio:scroll-carry", carry);
+
+    // Keys move the page through the same smoothing as the wheel, not in native jumps.
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || scrollLocks.size > 0) return;
+      if (document.documentElement.dataset.overlayOpen === "true") return;
+      const from = event.target instanceof HTMLElement ? event.target : null;
+      if (from?.closest("input,textarea,select,[contenteditable],[data-lenis-prevent]")) return;
+      const page = viewportHeight * 0.88;
+      let step: number;
+      if (event.key === " ") {
+        if (from?.closest("button,a,summary,[role=button]")) return;
+        step = event.shiftKey ? -page : page;
+      } else if (event.shiftKey) return;
+      else if (event.key === "PageDown") step = page;
+      else if (event.key === "PageUp") step = -page;
+      else if (event.key === "ArrowDown") step = 56;
+      else if (event.key === "ArrowUp") step = -56;
+      else if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        travelTo(event.key === "Home" ? 0 : lenis.limit);
+        return;
+      } else return;
+      event.preventDefault();
+      endTravel();
+      lenis.scrollTo(Math.max(0, Math.min(lenis.limit, lenis.targetScroll + step)));
+    };
+    window.addEventListener("keydown", onKey);
+    scroller.addEventListener("wheel", endTravel, { passive: true });
+    scroller.addEventListener("touchstart", endTravel, { passive: true });
 
     const onVisibilityChange = () => {
       if (document.hidden) stopRaf();
@@ -218,6 +291,10 @@ export default function Home() {
       window.removeEventListener("portfolio:go-home", goHome);
       window.removeEventListener("portfolio:scroll-lock", setScrollLock);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("portfolio:scroll-carry", carry);
+      window.removeEventListener("keydown", onKey);
+      scroller.removeEventListener("wheel", endTravel);
+      scroller.removeEventListener("touchstart", endTravel);
       scrollLocks.clear();
       scroller.style.removeProperty("overflow-y");
       reduced.removeEventListener("change", update);
@@ -227,7 +304,10 @@ export default function Home() {
       lenisRef.current = null;
       stopRaf();
       delete document.documentElement.dataset.heroScrolling;
-      heroBox.style.removeProperty("--hero-scroll-progress");
+      for (const sheet of sheets) {
+        sheet.style.removeProperty("--hero-scroll-progress");
+        sheet.removeAttribute("data-lifting");
+      }
     };
   }, []);
 
@@ -235,7 +315,7 @@ export default function Home() {
     <main ref={page} className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-white">
       <div ref={pageContent} className="min-h-full">
       <ProjectsExperience>
-      <div ref={heroSurface} className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden w-full">
+      <div ref={heroSurface} className={`${styles.heroSheet} relative flex min-h-0 flex-1 items-end justify-center overflow-hidden w-full`}>
         <div className={`${styles.haloLayer} absolute inset-0 z-0 pointer-events-auto`}>
           <AntigravityHalo />
         </div>

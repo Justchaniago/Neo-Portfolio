@@ -5,7 +5,8 @@
   flex: 0 0 100dvh;
   min-height: 100dvh;
   overflow: hidden;
-  background: #fff;
+  /* The sheet inside carries the white, so the drawing shows beside it as it lifts. */
+  background: transparent;
 }
 
 .heroReturning {

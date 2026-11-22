@@ -8,6 +8,7 @@ Interactive, mobile-first portfolio of **Just Chaniago** — Founder of Chaniago
 - **Interactive WebGL & 2D Canvas**:
   - Custom Three.js shader particle ring (`AntigravityHalo`) with Poisson-disc distribution and analytical pointer tracking.
   - Starburst streaks shorten into a night sky and gather into a slowly rotating globe. Two lines travel clockwise along its rim with scroll, which then scatters the grains before they settle into Indonesia on black, without a location pin. The map then spirals into one grain, which opens as a white disc into the closing tagline.
+  - Scroll: Lenis smooths wheel and touch on `main`. Keys (arrows, Page Up/Down, Space) go through the same smoothing; Home, End and the logo travel with a slow start and landing. The Narrative reading hold scrolls the page with it and hands its speed to and from Lenis, so there is no jump or standstill at either end.
 - **Card-Stack Overlay Navigation**: Smooth GSAP-driven sheet transitions (`StackSection`) for `Projects`, `About`, and `Contact` alongside a `Cmd/Ctrl + K` Command Palette.
 - **Adaptive Performance Engine (`src/lib/performanceTier.ts`)**: Hardware/WebGL capability detection + real-time FPS monitoring that dynamically scales DPR, shader density, canvas resolution, and compositor filters across Chrome, Safari, and Windows/macOS devices.
 

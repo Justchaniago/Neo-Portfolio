@@ -25,7 +25,7 @@ export function BlueprintWorkspace({ posterSrc }: { posterSrc: string }) {
     const still = matchMedia("(prefers-reduced-motion: reduce), (forced-colors: active)");
     let scene: BlueprintSceneHandle | null = null;
     let frame = 0, top = 0, length = 1, view = 1, maxPull = 0;
-    let visible = false, loading = false, failed = false, disposed = false;
+    let visible = false, loading = false, failed = false, disposed = false, veil = "";
 
     const clearLift = () => labs?.style.removeProperty("--blueprint-lift");
     const release = () => {
@@ -45,6 +45,9 @@ export function BlueprintWorkspace({ posterSrc }: { posterSrc: string }) {
       const entry = clamp(-y / view);
       const cover = clamp((y + view - length) / view);
       stage.style.transform = `translate3d(0,${((entry - cover) * view * 0.23).toFixed(2)}px,0)`;
+      // The desk sits in the Hero's shade and brightens as the sheet lifts away.
+      const dim = (0.5 * entry).toFixed(3);
+      if (dim !== veil) stage.style.setProperty("--veil", veil = dim);
       // The right tip leads into view; the left catches up before Labs fills the screen.
       const settle = clamp((cover - 0.56) / (0.92 - 0.56));
       const rise = maxPull * (1 - settle * settle * (3 - 2 * settle));
@@ -150,6 +153,7 @@ export function BlueprintWorkspace({ posterSrc }: { posterSrc: string }) {
           <Image className={styles.poster} src={posterSrc} alt="" fill sizes="100vw" />
           <div className={styles.surface} ref={surfaceRef} />
           <div className={styles.vignette} />
+          <div className={styles.veil} />
           <div className={styles.notes} ref={notesRef}>
             <div className={styles.coords}><span>X 242.00</span><span>Y 536.00</span></div>
             <div className={styles.stamp}>
@@ -159,6 +163,7 @@ export function BlueprintWorkspace({ posterSrc }: { posterSrc: string }) {
           </div>
         </div>
       </div>
+      <div className={styles.heroShade} data-hero-shade="" aria-hidden="true" />
     </section>
   );
 }

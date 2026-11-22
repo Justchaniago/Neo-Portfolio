@@ -26,6 +26,10 @@ const phase = (p: number, a: number, b: number) => clamp((p - a) / (b - a));
 const ease = (v: number) => v * v * (3 - 2 * v);
 const READING_START = 0.08;
 const READING_END = 0.74;
+// Reading may run this far past either end, so a scroll that keeps going leaves at speed.
+const READING_OVERRUN = 0.035;
+// Reading pace in section progress per second, and how fast it settles after entry.
+const READING_PACE = 0.3;
 const LOCK_SOURCE = "narrative-reading";
 
 export function NarrativeSection() {
@@ -55,10 +59,12 @@ export function NarrativeSection() {
     let top = 0, travel = 1, width = 1, height = 1, viewTop = 0, viewLeft = 0;
     let visible = false, disposed = false;
     let mx = -9999, my = -9999, mouseVX = 0, mouseVY = 0;
-    let reading = false, readingDone = false, bypassReading = false;
+    let reading = false, readingDone = false, bypassReading = false, travelling = false;
     let taglineProgress = 0;
     let direction = 1, smoothDirection = 1;
     let inputDistance = 0, inputVelocity = 0, touchY: number | null = null;
+    // Signed progress per second, and the reading speed limit as it eases in from the entry speed.
+    let rate = 0, pace = READING_PACE;
     let copyHidden = false;
     const externalLocks = new Set<string>();
 
@@ -72,10 +78,18 @@ export function NarrativeSection() {
       if (!reading) return;
       reading = false;
       if (destination !== undefined) {
-        current = target = previous = destination;
-        scroller.scrollTop = top + travel * destination;
+        current = previous = destination;
+        // Outside reading the section trails the page by 62 ms. Put the page that far ahead,
+        // so the section keeps its speed across the release instead of dipping.
+        target = destination + rate * 0.062;
+        scroller.scrollTop = top + travel * target;
       }
       setReadingLock(false);
+      // Hand the pace back to the page scroll instead of restarting it from a standstill.
+      if (destination !== undefined && Math.abs(rate) > 0.004) {
+        window.dispatchEvent(new CustomEvent("portfolio:scroll-carry", { detail: { velocity: rate * travel } }));
+      }
+      rate = 0;
     };
 
     const render = (time: number) => {
@@ -85,8 +99,12 @@ export function NarrativeSection() {
       const dt = Math.min(0.05, Math.max(0.001, (time - (last || time - 16.67)) / 1000));
       last = time;
       const step = (target - current) * (1 - Math.exp(-dt / 0.062));
-      current += reading ? Math.max(-dt * 0.3, Math.min(dt * 0.3, step)) : step;
+      if (reading) pace += (READING_PACE - pace) * (1 - Math.exp(-dt / 0.3));
+      current += reading ? Math.max(-dt * pace, Math.min(dt * pace, step)) : step;
       if (Math.abs(target - current) < 0.0001) current = target;
+      rate = (current - previous) / dt;
+      // The page scrolls with the reading, so nothing jumps when the lock releases.
+      if (reading) scroller.scrollTop = top + travel * current;
       // Viewports/second makes the response consistent across section lengths.
       // Ease into acceleration, then coast back to idle more slowly.
       const scrollVelocity = Math.abs(current - previous) * travel / height / dt;
@@ -173,8 +191,8 @@ export function NarrativeSection() {
       const stageFade = 1 - ramp(flight, HEADS_LANDED, SKY_REVEALED);
       visual.style.opacity = String(stageFade);
       visual.style.pointerEvents = p >= 0.86 ? "none" : "auto";
-      const leavingForward = direction > 0 && target >= READING_END && current >= READING_END - 0.012 && taglineProgress >= 0.69;
-      const leavingReverse = direction < 0 && target <= READING_START && current <= READING_START + 0.012;
+      const leavingForward = direction > 0 && current >= READING_END && taglineProgress >= 0.69;
+      const leavingReverse = direction < 0 && current <= READING_START;
       if (reading && (leavingForward || leavingReverse)) {
         readingDone = leavingForward;
         finishReading(current);
@@ -188,9 +206,10 @@ export function NarrativeSection() {
       edge.scroll(clamp(1 + (scroller.scrollTop - top) / height), scroller.scrollTop);
       const nextTarget = clamp((scroller.scrollTop - top) / travel);
       if (reading) {
+        // Our own per-frame sync, or a nudge inside the interval.
+        if (Math.abs(nextTarget - current) < .004 || (nextTarget >= READING_START - .001 && nextTarget <= READING_END + .001)) { wake(); return; }
         // Hash navigation or a native jump can move even a locked scroller.
         // Never drag that landing back into the reading interval.
-        if (nextTarget >= READING_START - .001 && nextTarget <= READING_END + .001) { wake(); return; }
         finishReading();
         readingDone = nextTarget > READING_END;
         current = previous = taglineProgress = nextTarget;
@@ -203,11 +222,17 @@ export function NarrativeSection() {
       const enteringReverse = !bypassReading && oldTarget >= READING_END && target < READING_END;
       // A fast flick may cross the entire reading interval. Don't drag it back
       // into Narrative; when landing inside, start at the actual landing point.
-      if (!reduced.matches && externalLocks.size === 0 && target >= READING_START && target <= READING_END && (enteringForward || enteringReverse)) {
+      if (!reduced.matches && !travelling && externalLocks.size === 0 && target >= READING_START && target <= READING_END && (enteringForward || enteringReverse)) {
         reading = true; inputDistance = 0;
         direction = enteringReverse ? -1 : 1;
-        current = previous = target;
-        taglineProgress = current;
+        if (Math.abs(target - current) > 0.03) {
+          // A jump landed here: read from the landing point.
+          current = previous = taglineProgress = target;
+          rate = 0;
+        }
+        // Arriving on a scroll: keep its speed and let the reading pace take over from there.
+        pace = Math.max(0.08, Math.min(READING_PACE, Math.abs(rate)));
+        target = Math.max(READING_START, Math.min(READING_END, current + direction * Math.abs(rate) * 0.3));
         setReadingLock(true);
         wake();
         return;
@@ -261,7 +286,7 @@ export function NarrativeSection() {
       direction = nextDirection;
       const distance = Math.min(height * 3, Math.abs(delta));
       inputDistance += distance;
-      target = Math.max(READING_START, Math.min(READING_END, target + direction * distance / height * 0.7));
+      target = Math.max(READING_START - READING_OVERRUN, Math.min(READING_END + READING_OVERRUN, target + direction * distance / height * 0.7));
       wake();
     };
     const wheel = (event: WheelEvent) => {
@@ -287,6 +312,12 @@ export function NarrativeSection() {
       else if (event.key === "Escape") { event.preventDefault(); finishReading(current); }
     };
     const navigation = () => { readingDone = true; bypassReading = true; finishReading(); };
+    // A programmatic jump (Home, End) passes through without being held; reading resumes once it lands.
+    const passage = (event: Event) => {
+      travelling = Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active);
+      if (travelling) finishReading();
+      else readingDone = target > READING_END;
+    };
     const lockChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: string; locked?: boolean }>).detail;
       if (!detail?.source || detail.source === LOCK_SOURCE) return;
@@ -313,6 +344,7 @@ export function NarrativeSection() {
     window.addEventListener("portfolio:go-home", navigation);
     window.addEventListener("portfolio:request-section", navigation);
     window.addEventListener("portfolio:toggle-projects", navigation);
+    window.addEventListener("portfolio:scroll-travel", passage);
     window.addEventListener("portfolio:scroll-lock", lockChanged);
     visual.addEventListener("pointermove", pointer, { passive: true });
     visual.addEventListener("pointerleave", leave);
@@ -335,6 +367,7 @@ export function NarrativeSection() {
       window.removeEventListener("portfolio:go-home", navigation);
       window.removeEventListener("portfolio:request-section", navigation);
       window.removeEventListener("portfolio:toggle-projects", navigation);
+      window.removeEventListener("portfolio:scroll-travel", passage);
       window.removeEventListener("portfolio:scroll-lock", lockChanged);
       visual.removeEventListener("pointerleave", leave); reduced.removeEventListener("change", motionChange);
       contrast.removeEventListener("change", measure);

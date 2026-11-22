@@ -10,11 +10,25 @@
   position: sticky;
   top: 0;
   height: 100dvh;
-  overflow: hidden;
+  /* Clipped on three sides; the top stays open for the lip below. `overflow-x` keeps the
+     scaled poster out of the page's scroll width, which `clip-path` alone does not. */
+  overflow-x: clip;
+  clip-path: inset(-25dvh 0 0);
   background: #1f45b4;
 }
+/* The stage starts 23% of a viewport low and catches up. This keeps the strip above it
+   blue beside the lifted Hero sheet, instead of the page's white. */
+.stage::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 25dvh;
+  background: #1b3b97;
+}
 
-.surface, .vignette, .notes { position: absolute; inset: 0; }
+.surface, .vignette, .veil, .notes { position: absolute; inset: 0; }
 .surface canvas { display: block; width: 100%; height: 100%; }
 .poster { object-fit: cover; transform: scale(var(--poster-scale, 1)); }
 .stage[data-live] .poster { visibility: hidden; }
@@ -22,6 +36,29 @@
   background: radial-gradient(ellipse at 50% 55%, transparent 35%, rgb(8 16 50 / 28%) 100%);
   pointer-events: none;
 }
+.veil {
+  top: -25dvh;
+  background: #050b2c;
+  opacity: var(--veil, 0.5);
+  pointer-events: none;
+  will-change: opacity;
+}
+/* Shadow of the lifted Hero: the Hero's own box, one viewport above this section, at the sheet's scale. */
+.heroShade {
+  --lift: var(--hero-scroll-progress, 0);
+  position: absolute;
+  top: -100dvh;
+  right: 0;
+  left: 0;
+  height: 100dvh;
+  border-radius: 0 0 clamp(18px, 3.2vw, 40px) clamp(18px, 3.2vw, 40px);
+  box-shadow: 0 3px 12px rgb(2 6 28 / 45%), 0 36px 90px 8px rgb(2 6 28 / 66%);
+  opacity: calc(min(1, var(--lift) * 3.2));
+  transform: scale(calc(1 - 0.06 * var(--lift) * (2 - var(--lift))));
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+.heroShade[data-lifting] { will-change: transform, opacity; }
 .notes {
   opacity: 0;
   color: #e9eeff;
@@ -59,4 +96,6 @@
   .track { inset: 0; }
   .stage { position: relative; height: 100%; transform: none !important; }
   .poster { object-fit: contain; transform: none !important; }
+  .veil, .heroShade, .stage::before { display: none; }
+  .stage { clip-path: none; overflow: hidden; }
 }
