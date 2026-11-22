@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/icon.svg" }];
+  },
   reactCompiler: true,
   devIndicators: false,
   allowedDevOrigins: ["*.trycloudflare.com", "trycloudflare.com"],

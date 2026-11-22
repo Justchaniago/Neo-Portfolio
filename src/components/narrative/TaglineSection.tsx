@@ -333,7 +333,7 @@ export function TaglineSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className={styles.section} aria-label="Build something together">
+    <section ref={sectionRef} className={styles.section} data-home-chapter="CONNECT" aria-label="Build something together">
       <div ref={stageRef} className={styles.stage}>
         <h2 ref={titleRef} className={styles.title} aria-label={tagline}>
           <span className={styles.line} aria-hidden="true">

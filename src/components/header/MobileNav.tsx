@@ -3,20 +3,18 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { triggerRouteTransition } from "@/components/projects/ProjectTransition";
 import styles from "./MobileNav.module.css";
-
-const sections = [
-  { index: "01", label: "Project", name: "project" },
-  { index: "02", label: "About", name: "about" },
-  { index: "03", label: "Contact", name: "contact" },
-] as const;
+import { currentSection, headerSections, sectionHref, type HeaderSection } from "./sections";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [activeSection, setActiveSection] = useState("hero");
+  const pathname = usePathname();
+  const router = useRouter();
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const destination = useRef<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -33,37 +31,45 @@ export function MobileNav() {
     }));
     lock(true);
     const desktop = matchMedia("(min-width: 768px)");
-    const onResize = () => { if (desktop.matches) setOpen(false); };
+    const dismiss = () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+      setOpen(false);
+    };
+    const onResize = () => { if (desktop.matches) dismiss(); };
     desktop.addEventListener("change", onResize);
+    window.addEventListener("popstate", dismiss);
     return () => {
       if (closeTimer.current) clearTimeout(closeTimer.current);
       closeTimer.current = null;
       desktop.removeEventListener("change", onResize);
+      window.removeEventListener("popstate", dismiss);
       if (content) content.inert = previousInert;
       lock(false);
       const target = returnFocus.current ?? trigger;
       if (target?.isConnected && !target.closest("[inert]")
         && target.getClientRects().length
         && getComputedStyle(target).visibility !== "hidden") target.focus({ preventScroll: true });
-      if (destination.current) {
-        window.dispatchEvent(new CustomEvent("portfolio:request-section", {
-          detail: { section: destination.current },
-        }));
-        destination.current = null;
-      }
     };
   }, [open]);
 
-  const close = (section?: string) => {
+  const close = (section?: HeaderSection) => {
     if (closeTimer.current) return;
-    destination.current = section ?? null;
     const panel = panelRef.current;
     if (panel) panel.style.setProperty("--exit-transform", getComputedStyle(panel).transform);
     const scrim = panel?.previousElementSibling as HTMLElement | null;
     if (scrim) scrim.style.setProperty("--exit-opacity", getComputedStyle(scrim).opacity);
     setClosing(true);
-    closeTimer.current = setTimeout(() => setOpen(false),
-      matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
+    closeTimer.current = setTimeout(() => {
+      setOpen(false);
+      if (!section) return;
+      if (pathname !== "/") {
+        const href = sectionHref(section.name, pathname);
+        triggerRouteTransition({ href, label: section.transition, navigate: () => router.push(href) });
+      } else {
+        window.dispatchEvent(new CustomEvent("portfolio:request-section", { detail: { section: section.name } }));
+      }
+    }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -96,11 +102,7 @@ export function MobileNav() {
         aria-controls="mobile-navigation-panel"
         onClick={() => {
           returnFocus.current = buttonRef.current;
-          const current =
-            document.documentElement.dataset.projectsActive === "true"
-              ? "project"
-              : document.documentElement.dataset.staticSection || "hero";
-          setActiveSection(current);
+          setActiveSection(currentSection(pathname));
           setClosing(false);
           setOpen(true);
         }}
@@ -127,17 +129,18 @@ export function MobileNav() {
             </button>
           </div>
           <nav className={styles.links} aria-label="Main navigation">
-            {sections.map((section, itemIndex) => (
+            {headerSections.map((section, itemIndex) => (
               <a
                 key={section.name}
                 className={styles.link}
                 data-active={activeSection === section.name}
                 style={{ "--item-index": itemIndex } as CSSProperties}
-                href={section.name === "project" ? "#projects-layer" : `#${section.name}`}
+                href={sectionHref(section.name, pathname)}
+                aria-current={activeSection === section.name ? "location" : undefined}
                 onClick={event => {
                   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                   event.preventDefault();
-                  close(section.name);
+                  close(section);
                 }}
               >
                 <span className={styles.linkContent}>

@@ -1,28 +1,38 @@
 .rail {
-  --row-height: clamp(56px, 12svh, 136px);
+  --row-height: clamp(56px, 12svh, 134px);
   position: absolute;
   top: 50%;
-  right: max(16px, env(safe-area-inset-right));
+  right: max(20px, env(safe-area-inset-right));
   z-index: 3;
   width: min(48vw, 740px);
   height: calc(5 * var(--row-height));
   transform: translateY(-50%);
   visibility: hidden;
   color: #fff;
-  font-size: clamp(32px, 5.2vw, 86px);
+  font-size: clamp(32px, 5vw, 84px);
   font-weight: 560;
   letter-spacing: -0.055em;
   line-height: 1.1;
   touch-action: pan-x pinch-zoom;
   pointer-events: none;
 }
-.rail:focus-visible { outline: 1px solid #dfa13d; outline-offset: 6px; border-radius: 4px; }
+
+.viewport:focus-visible {
+  outline: none;
+}
+
+.rail:has(.viewport:focus-visible) .marker {
+  border-color: var(--project-accent, #dfa13d);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--project-accent, #dfa13d) 45%, transparent);
+}
+
 .viewport {
   position: absolute;
   inset: 0;
   overflow: hidden;
   mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
 }
+
 .row {
   position: absolute;
   top: calc(2 * var(--row-height));
@@ -36,50 +46,231 @@
   user-select: none;
   pointer-events: auto;
 }
-.row span { display: block; white-space: nowrap; }
-.active { font-weight: 650; }
+
+.rowInner {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.22em;
+  max-width: 100%;
+  white-space: normal;
+  transition: color 240ms ease;
+}
+
+.rowNum {
+  font: 600 clamp(10px, 0.9vw, 13px)/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+  color: rgb(255 255 255 / 0.34);
+  transform: translateY(-1.55em);
+  transition: color 260ms ease;
+}
+
+.rowTitle {
+  display: inline-block;
+  max-width: min(56vw, 640px);
+  overflow-wrap: anywhere;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.active {
+  font-weight: 650;
+}
+
+.active .rowNum {
+  color: var(--project-accent, #dfa13d);
+}
+
+.row:not(.active):hover .rowTitle {
+  transform: translateX(-6px);
+}
+
 .marker {
-  --marker-size: clamp(48px, 4.5vw, 64px);
+  --marker-size: clamp(46px, 4.4vw, 62px);
   position: absolute;
   top: calc(2 * var(--row-height) + (var(--row-height) - var(--marker-size)) / 2);
   right: 0;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
   width: var(--marker-size);
   height: var(--marker-size);
-  border: 1px solid rgb(255 255 255 / 0.68);
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.52);
   border-radius: 50%;
-  pointer-events: none;
-  font-family: Arial, sans-serif;
-  font-size: clamp(32px, 3.2vw, 44px);
-  font-weight: 400;
-  line-height: 1;
-  padding-bottom: 0.12em;
+  background: rgb(255 255 255 / 0.03);
+  color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    border-color 280ms ease,
+    background-color 280ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.underline { display: none; }
+
+.markerGlyph {
+  font-size: clamp(18px, 1.8vw, 24px);
+  font-weight: 500;
+  line-height: 1;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms ease;
+}
+
+.marker:hover,
+.active:hover ~ .marker {
+  border-color: var(--project-accent, #dfa13d);
+  background: color-mix(in srgb, var(--project-accent, #dfa13d) 18%, transparent);
+}
+
+.marker:hover .markerGlyph {
+  transform: translate3d(2px, -2px, 0);
+  color: var(--project-accent, #dfa13d);
+}
+
+.underline {
+  display: none;
+}
+
+.step {
+  display: none;
+}
+
+.railCaption { display: none; }
+
+@media (min-width: 768px) {
+  .rail {
+    right: max(5vw, env(safe-area-inset-right));
+    width: min(41vw, 700px);
+    font-size: clamp(30px, 4.1vw, 74px);
+  }
+  .rail::before {
+    content: "";
+    position: absolute;
+    inset: 40% 0;
+    border-block: 1px solid rgb(255 255 255 / 0.23);
+    pointer-events: none;
+  }
+  .row {
+    width: 100%;
+    justify-content: flex-start;
+    padding-left: 8px;
+  }
+  .rowInner { gap: 0.3em; }
+  .marker { right: 6px; }
+  .railCaption {
+    display: flex;
+    position: absolute;
+    inset: auto 0 calc(100% + 10px);
+    justify-content: space-between;
+    border-bottom: 1px solid rgb(255 255 255 / 0.2);
+    padding-block: 8px;
+    color: #aaa;
+    font: 550 0.67rem/1.4 ui-monospace, monospace;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+}
+
 @media (max-width: 767px) {
   .rail {
     top: auto;
-    bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+    bottom: max(18px, calc(env(safe-area-inset-bottom) + 12px));
     right: 0;
     width: 100%;
-    height: 104px;
+    height: 98px;
     transform: none;
-    font-size: clamp(32px, 8.8vw, 56px);
-    font-weight: 750;
+    font-size: clamp(25px, 7.2vw, 40px);
+    font-weight: 700;
     touch-action: pan-y pinch-zoom;
     pointer-events: auto;
   }
-  .viewport { mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
-  .row { top: 0; left: 31%; right: auto; width: 38%; height: 80px; justify-content: center; }
-  .active { font-weight: 750; }
-  .marker { display: none; }
+
+  .viewport {
+    mask-image: linear-gradient(to right, transparent 0%, #000 15%, #000 85%, transparent 100%);
+  }
+
+  .step {
+    position: absolute;
+    top: 20px;
+    left: max(12px, env(safe-area-inset-left));
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #454545;
+    border-radius: 50%;
+    background: #111;
+    color: #fff;
+    font: 500 18px/1 var(--font-space-grotesk), sans-serif;
+  }
+
+  .step[data-step="1"] {
+    left: auto;
+    right: max(12px, env(safe-area-inset-right));
+  }
+
+  .step:focus-visible {
+    outline: 2px solid #dfa13d;
+    outline-offset: 3px;
+  }
+
+  .rail:has(.viewport:focus-visible) .underline {
+    background: #fff;
+    height: 4px;
+  }
+
+  .row {
+    top: 6px;
+    left: 14%;
+    right: auto;
+    width: 72%;
+    height: 72px;
+    justify-content: center;
+  }
+
+  .rowNum {
+    font-size: 10px;
+    transform: translateY(-1.25em);
+  }
+
+  .active {
+    font-weight: 750;
+  }
+
+  .marker {
+    display: none;
+  }
+
   .underline {
-    display: block; position: absolute; bottom: 10px; left: 36%; width: 28%; height: 2px;
-    background: currentColor; transform: scaleX(0); transform-origin: left center;
+    display: block;
+    position: absolute;
+    bottom: 10px;
+    left: 34%;
+    width: 32%;
+    height: 2px;
+    background: var(--project-accent, #dfa13d);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: background-color 320ms ease;
   }
 }
-@media (min-width: 768px) and (max-height: 480px) {
-  .rail { top: 60%; --row-height: 44px; font-size: clamp(28px, 4vw, 40px); }
+
+@media (min-width: 768px) and (max-height: 520px) {
+  .rail {
+    top: 54%;
+    --row-height: 46px;
+    font-size: clamp(24px, 3.6vw, 38px);
+  }
+
+  .marker {
+    --marker-size: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowTitle,
+  .marker,
+  .markerGlyph,
+  .underline {
+    transition: none;
+  }
 }

@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useRef } from "react";
 import type { CSSProperties } from "react";
+import { triggerRouteTransition } from "@/components/projects/ProjectTransition";
 import { useLogoReveal } from "./useLogoReveal";
 import styles from "./HeaderLogo.module.css";
 
 export function HeaderLogo() {
   const ref = useRef<HTMLAnchorElement>(null);
+  const pathname = usePathname();
+  const router = useRouter();
   useLogoReveal(ref);
 
   return (
@@ -17,7 +21,16 @@ export function HeaderLogo() {
       className={styles.logo}
       aria-label="justchaniago — Home"
       onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
         event.preventDefault();
+        if (pathname !== "/") {
+          triggerRouteTransition({
+            href: "/",
+            label: "CHANIAGO.ME",
+            navigate: () => router.push("/"),
+          });
+          return;
+        }
         window.dispatchEvent(new CustomEvent("portfolio:close-projects"));
         window.dispatchEvent(new CustomEvent("portfolio:close-static-pages"));
         window.dispatchEvent(new CustomEvent("portfolio:go-home"));

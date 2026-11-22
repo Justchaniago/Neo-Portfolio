@@ -1,15 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import styles from "./ProjectsExperience.module.css";
 import { ProjectDetails } from "./ProjectDetails";
 import { ProjectRail } from "./ProjectRail";
+import { triggerRouteTransition } from "./ProjectTransition";
+import { pageMotion, sheetDuration } from "@/lib/pageMotion";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
+import { BlueprintWorkspace } from "@/components/blueprint/BlueprintWorkspace";
+import { TheCutSection } from "@/components/narrative/TheCutSection";
 import { NarrativeSection } from "@/components/narrative/NarrativeSection";
 import { AsciiGlobeSection } from "@/components/narrative/AsciiGlobeSection";
 import { TaglineSection } from "@/components/narrative/TaglineSection";
 import { StaticPagesExperience } from "@/components/pages/StaticPagesExperience";
+import { PROJECTS } from "@/lib/projects";
 import { getPerformanceProfile } from "@/lib/performanceTier";
 
 const setProjectScrollLock = (locked: boolean) => {
@@ -19,6 +25,7 @@ const setProjectScrollLock = (locked: boolean) => {
 };
 
 export function ProjectsExperience({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const hero = useRef<HTMLDivElement>(null);
   const layer = useRef<HTMLElement>(null);
   const surfacePath = useRef<SVGPathElement>(null);
@@ -27,9 +34,27 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
   const targetOpen = useRef(false);
   const projectLabelVisible = useRef(false);
   const returning = useRef(false);
+  const initialQueryRef = useRef<{ section: string | null; matchedIdx: number } | null>(null);
   const [active, setActive] = useState(false);
   const [projectIndex, setProjectIndex] = useState(0);
-  const handleProjectChange = useCallback((index: number) => setProjectIndex(index), []);
+  const [stepDirection, setStepDirection] = useState(1);
+
+  const handleProjectChange = useCallback((index: number, direction = 1) => {
+    setStepDirection(direction >= 0 ? 1 : -1);
+    setProjectIndex(index);
+  }, []);
+
+  const handleOpenProject = useCallback((index: number) => {
+    const project = PROJECTS[index] ?? PROJECTS[0];
+    const href = `/projects/${project.slug}`;
+    triggerRouteTransition({
+      href,
+      label: `${project.number} — ${project.title}`,
+      accent: project.accent,
+      replaceBefore: `/?section=project&project=${project.slug}`,
+      navigate: () => router.push(href),
+    });
+  }, [router]);
 
   const syncBackgroundDepth = useCallback(() => {
     const heroEl = hero.current;
@@ -53,14 +78,9 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (depth >= 0.999) {
-      heroEl.style.willChange = "auto";
-      return;
-    }
-
     const perf = getPerformanceProfile();
     const useFilter = perf.tier === "high" && !perf.isSafari && !perf.isWindows;
-    heroEl.style.willChange = useFilter ? "transform, filter" : "transform";
+    heroEl.style.willChange = depth >= 0.999 ? "auto" : useFilter ? "transform, filter" : "transform";
 
     const scale = 1 - depth * 0.046;
     const y = -depth * 32;
@@ -103,6 +123,59 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     syncBackgroundDepth();
   }, [syncBackgroundDepth]);
 
+  // Synchronous pre-paint restore when returning from a case-study route (?section=project&project=slug)
+  // Cached in initialQueryRef so React Strict Mode double-invocation in dev replays identically.
+  useLayoutEffect(() => {
+    if (!initialQueryRef.current) {
+      const params = new URLSearchParams(window.location.search);
+      const sec = params.get("section");
+      const slug = params.get("project");
+      initialQueryRef.current = {
+        section: sec,
+        matchedIdx: slug ? PROJECTS.findIndex((p) => p.slug === slug) : -1,
+      };
+    }
+    const { section, matchedIdx } = initialQueryRef.current;
+
+    if (matchedIdx >= 0) {
+      window.dispatchEvent(new CustomEvent("portfolio:select-project", {
+        detail: { index: matchedIdx },
+      }));
+    }
+
+    if (section === "project" && document.documentElement.dataset.splashComplete === "true") {
+      const sheet = layer.current;
+      targetOpen.current = true;
+      projectLabelVisible.current = true;
+      document.documentElement.dataset.projectsActive = "true";
+      if (sheet) {
+        sheet.style.zIndex = "53";
+        sheet.removeAttribute("inert");
+        sheet.setAttribute("aria-hidden", "false");
+        gsap.set(sheet, { clearProps: "scale,filter,y" });
+      }
+      apply(1);
+      setProjectScrollLock(true);
+      let cleanedUrl = false;
+      const rafId = requestAnimationFrame(() => {
+        if (!cleanedUrl && window.location.search) {
+          cleanedUrl = true;
+          window.history.replaceState(null, "", "/");
+        }
+        scroller.current?.focus({ preventScroll: true });
+      });
+      queueMicrotask(() => {
+        setActive(true);
+        if (matchedIdx >= 0) setProjectIndex(matchedIdx);
+      });
+      return () => cancelAnimationFrame(rafId);
+    } else if (matchedIdx >= 0) {
+      queueMicrotask(() => {
+        setProjectIndex(matchedIdx);
+      });
+    }
+  }, [apply]);
+
   const parkUnderneath = useCallback(() => {
     const sheet = layer.current;
     gsap.killTweensOf(ratio);
@@ -138,8 +211,8 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       scale: reduced ? 1 : 0.965,
       y: reduced ? 0 : -14,
       filter: reduced || !useFilter ? "none" : "brightness(0.55)",
-      duration: reduced ? 0 : 0.92,
-      ease: "expo.out",
+      duration: reduced ? 0 : pageMotion.travel,
+      ease: pageMotion.ease,
       overwrite: "auto",
     });
   }, [parkUnderneath]);
@@ -151,6 +224,10 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     targetOpen.current = destination > 0;
     gsap.killTweensOf(ratio);
     gsap.killTweensOf(sheet, "scale,filter,y");
+    if (scroller.current) {
+      gsap.killTweensOf(scroller.current);
+      gsap.set(scroller.current, { clearProps: "transform,opacity,visibility" });
+    }
 
     if (destination > 0) {
       setProjectScrollLock(true);
@@ -159,8 +236,6 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       document.documentElement.dataset.projectsActive = "true";
       sheet.style.zIndex = "53";
       gsap.set(sheet, { clearProps: "scale,filter,y" });
-      // If Projects was stationary underneath as a recessed card (`ratio === 1`),
-      // reset its entrance position to bottom (`0`) so it slides up cleanly over the previous active card!
       const staticProgress = Number(document.documentElement.dataset.staticProgress ?? "0");
       if (staticProgress > 0.001 && ratio.current >= 0.98) {
         ratio.current = 0;
@@ -175,8 +250,8 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.to(ratio, {
       current: destination,
-      duration: reduced ? 0 : destination === 0 ? 0.92 : 1.04,
-      ease: "expo.out",
+      duration: sheetDuration(destination - ratio.current, reduced),
+      ease: pageMotion.ease,
       overwrite: true,
       onUpdate: () => apply(ratio.current),
       onComplete: () => {
@@ -188,7 +263,6 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
           window.dispatchEvent(new CustomEvent("portfolio:project-closed"));
           document.querySelector<HTMLAnchorElement>("[data-project-link='true']")?.focus({ preventScroll: true });
         } else {
-          // Top card has fully covered the viewport: atomically park any background static cards!
           window.dispatchEvent(new CustomEvent("portfolio:stack-top-settled", {
             detail: { top: "project" },
           }));
@@ -229,8 +303,8 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         y: 0,
         yPercent: 0,
         scale: 1,
-        duration: reduced ? 0 : 1.08,
-        ease: "expo.out",
+        duration: reduced ? 0 : pageMotion.travel,
+        ease: pageMotion.ease,
         overwrite: true,
         onComplete: () => {
           returning.current = false;
@@ -253,7 +327,6 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       const staticSectionActive = Boolean(document.documentElement.dataset.staticSection);
       const staticProgress = Number(document.documentElement.dataset.staticProgress ?? "0");
       if (staticSectionActive || staticProgress > 0.001) {
-        // Card-stack over-slide: recede Static sheet in place underneath while Projects rises on top!
         window.dispatchEvent(new CustomEvent("portfolio:close-static-pages", {
           detail: { handoff: true },
         }));
@@ -268,8 +341,6 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       const detail = (event as CustomEvent<{ mode?: "hero-curtain" | "slide-down"; handoff?: boolean }>).detail;
       const mode = detail?.mode ?? "slide-down";
       const handoff = detail?.handoff ?? false;
-      // If Projects is merely a recessed background card while a Static card is on top,
-      // park Projects immediately so only the visible top card slides down to Home!
       if (!handoff && !targetOpen.current && Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001) {
         parkUnderneath();
         return;
@@ -282,6 +353,26 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         parkUnderneath();
       }
     };
+    const onSelectProject = (event: Event) => {
+      const idx = (event as CustomEvent<{ index?: number }>).detail?.index;
+      if (typeof idx === "number" && idx >= 0 && idx < PROJECTS.length) {
+        setProjectIndex(idx);
+      }
+    };
+    let exit: gsap.core.Tween | undefined;
+    const resetExit = () => exit?.revert();
+    const onRouteExit = () => {
+      if (!targetOpen.current || !scroller.current) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      exit = gsap.to(scroller.current, {
+        y: -20,
+        opacity: 0.25,
+        duration: pageMotion.cover,
+        ease: "power2.in",
+        overwrite: true,
+      });
+    };
+
     const staticObserver = new MutationObserver(syncBackgroundDepth);
     staticObserver.observe(document.documentElement, {
       attributes: true,
@@ -292,12 +383,19 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     window.addEventListener("portfolio:toggle-projects", requestProject);
     window.addEventListener("portfolio:close-projects", closeFromLogo);
     window.addEventListener("portfolio:stack-top-settled", onStackTopSettled);
+    window.addEventListener("portfolio:select-project", onSelectProject);
+    window.addEventListener("portfolio:route-exit", onRouteExit);
+    window.addEventListener("portfolio:route-enter", resetExit);
     return () => {
+      resetExit();
       staticObserver.disconnect();
       window.removeEventListener("portfolio:request-section", requestProject);
       window.removeEventListener("portfolio:toggle-projects", requestProject);
       window.removeEventListener("portfolio:close-projects", closeFromLogo);
       window.removeEventListener("portfolio:stack-top-settled", onStackTopSettled);
+      window.removeEventListener("portfolio:select-project", onSelectProject);
+      window.removeEventListener("portfolio:route-exit", onRouteExit);
+      window.removeEventListener("portfolio:route-enter", resetExit);
     };
   }, [closeProjects, parkUnderneath, settle, syncBackgroundDepth]);
 
@@ -305,11 +403,13 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     setProjectScrollLock(false);
     delete document.documentElement.dataset.projectsActive;
     delete document.documentElement.dataset.projectsProgress;
+    delete document.documentElement.dataset.overlayOpen;
+    delete document.documentElement.dataset.overlaySettled;
   }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || ratio.current <= 0) return;
+      if (event.key !== "Escape" || ratio.current <= 0 || event.defaultPrevented) return;
       if (!targetOpen.current && Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001) {
         parkUnderneath();
         return;
@@ -320,10 +420,14 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [closeProjects, parkUnderneath]);
 
+  const currentProject = PROJECTS[projectIndex] ?? PROJECTS[0];
+
   return <>
-    <div ref={hero} className={styles.hero}>
+    <div ref={hero} className={styles.hero} data-home-chapter="INDEX">
       {children}
     </div>
+    <BlueprintWorkspace posterSrc="/workspace-blueprint-4k.png" />
+    <TheCutSection />
     <NarrativeSection />
     <AsciiGlobeSection />
     <TaglineSection />
@@ -333,6 +437,7 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
       id="projects-layer"
       className={styles.layer}
       contentClassName={styles.scroll}
+      style={{ "--project-accent": currentProject.accent } as React.CSSProperties}
       inert={!active}
       aria-hidden={!active}
       aria-label="Projects"
@@ -353,9 +458,17 @@ export function ProjectsExperience({ children }: { children: ReactNode }) {
         closeProjects("slide-down");
       }}
     >
-      <div ref={scroller} tabIndex={-1}>
-        <ProjectDetails activeIndex={projectIndex} />
-        <ProjectRail onChange={handleProjectChange} />
+      <div ref={scroller} className={styles.stage} tabIndex={-1}>
+        <ProjectDetails
+          activeIndex={projectIndex}
+          direction={stepDirection}
+          onOpenProject={handleOpenProject}
+        />
+        <ProjectRail
+          activeIndex={projectIndex}
+          onChange={handleProjectChange}
+          onOpenProject={handleOpenProject}
+        />
       </div>
     </StackSection>
     <StaticPagesExperience />

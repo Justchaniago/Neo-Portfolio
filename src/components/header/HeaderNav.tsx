@@ -1,22 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent } from "react";
-import gsap from "gsap";
-import styles from "./HeaderLogo.module.css";
-import motion from "./HeaderNav.module.css";
-
-const ITEMS = [
-  { label: "project", href: "#projects-layer" },
-  { label: "about", href: "#about" },
-  { label: "contact", href: "#contact" },
-];
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { triggerRouteTransition } from "@/components/projects/ProjectTransition";
+import styles from "./HeaderNav.module.css";
+import { currentSection, headerSections, sectionHref } from "./sections";
 
 export function HeaderNav() {
-  const nav = useRef<HTMLElement>(null);
-  const links = useRef<Array<HTMLAnchorElement | null>>([]);
-  const [compact, setCompact] = useState(false);
   const [activeSection, setActiveSection] = useState("hero");
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const scroller = document.querySelector("main");
@@ -26,19 +19,13 @@ export function HeaderNav() {
     let previousScrollTop = scroller.scrollTop;
     let hasMeasured = false;
     let collapsed = false;
-    let currentActiveSection = "hero";
+    let currentActiveSection = "";
     let isScrollerScrollable = scroller.scrollHeight > scroller.clientHeight + 1;
-
-    const getSection = () => {
-      const staticSec = document.documentElement.dataset.staticSection;
-      if (staticSec === "about" || staticSec === "contact") return staticSec;
-      return document.documentElement.dataset.projectsActive === "true" ? "project" : "hero";
-    };
 
     const update = () => {
       const currentScrollTop = scroller.scrollTop;
-      const section = getSection();
-      const layerActive = section !== "hero"
+      const section = currentSection(pathname);
+      const layerActive = (pathname === "/" && section !== "hero")
         || document.documentElement.dataset.overlayOpen === "true"
         || Number(document.documentElement.dataset.projectsProgress ?? "0") > 0.001
         || Number(document.documentElement.dataset.staticProgress ?? "0") > 0.001;
@@ -66,25 +53,24 @@ export function HeaderNav() {
         setActiveSection(section);
       }
 
-      const baseTitle = "chaniago.me — Creative Software Engineer";
-      const nextTitle =
-        section === "project"
-          ? "Projects — chaniago.me"
-          : section === "about"
-            ? "About — chaniago.me"
-            : section === "contact"
-              ? "Contact — chaniago.me"
-              : baseTitle;
-      if (document.title !== nextTitle) {
-        document.title = nextTitle;
+      if (pathname === "/") {
+        const baseTitle = "chaniago.me — Creative Software Engineer";
+        const nextTitle =
+          section === "project"
+            ? "Projects — chaniago.me"
+            : section === "about"
+              ? "About — chaniago.me"
+              : section === "contact"
+                ? "Contact — chaniago.me"
+                : baseTitle;
+        if (document.title !== nextTitle) {
+          document.title = nextTitle;
+        }
       }
 
       if (next === collapsed) return;
       collapsed = next;
-      setCompact(next);
-      if (next && links.current.some((link) => link === document.activeElement)) {
-        (document.activeElement as HTMLElement).blur();
-      }
+      document.documentElement.dataset.headerCompact = String(next);
     };
 
     const measureAndUpdate = () => {
@@ -105,7 +91,6 @@ export function HeaderNav() {
     if (scroller.firstElementChild) {
       resizeObserver.observe(scroller.firstElementChild);
     }
-    const linkElements = links.current.slice();
 
     return () => {
       cancelAnimationFrame(initialFrame);
@@ -113,67 +98,34 @@ export function HeaderNav() {
       stateObserver.disconnect();
       resizeObserver.disconnect();
       mobile.removeEventListener("change", measureAndUpdate);
-      linkElements.forEach((link) => {
-        if (link) gsap.killTweensOf(link);
-      });
+      delete document.documentElement.dataset.headerCompact;
     };
-  }, []);
-
-  const move = (index: number, event: PointerEvent<HTMLAnchorElement>) => {
-    const link = links.current[index];
-    if (!link || event.pointerType === "touch") return;
-    const bounds = link.getBoundingClientRect();
-    const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 12;
-    const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 6;
-    gsap.to(link, {
-      "--mag-x": `${x.toFixed(2)}px`,
-      "--mag-y": `${y.toFixed(2)}px`,
-      duration: 0.32,
-      ease: "power3.out",
-      overwrite: true,
-    });
-  };
-
-  const reset = (index: number) => {
-    const link = links.current[index];
-    if (link) {
-      gsap.to(link, {
-        "--mag-x": "0px",
-        "--mag-y": "0px",
-        duration: 0.5,
-        ease: "elastic.out(1, 0.5)",
-        overwrite: true,
-      });
-    }
-  };
+  }, [pathname]);
 
   return (
-    <nav
-      ref={nav}
-      className={`${styles.nav} ${motion.links}`}
-      data-compact={compact}
-      data-section={activeSection}
-      inert={compact}
-      aria-label="Main navigation"
-    >
-      {ITEMS.map((item, index) => (
-        <span
-          key={item.label}
-          className={motion.navSlot}
-          data-section={item.label}
-          style={{ "--item-index": index } as CSSProperties}
-        >
+    <nav className={styles.nav} aria-label="Main navigation">
+      {headerSections.map((item, index) => (
           <a
-            ref={(element) => { links.current[index] = element; }}
-            className={`${styles.navLink} ${motion.navLink}`}
-            data-section={item.label}
-            href={item.href}
-            data-project-link={item.label === "project" ? "true" : undefined}
+            key={item.name}
+            className={styles.navLink}
+            data-section={item.name}
+            href={sectionHref(item.name, pathname)}
+            data-project-link={item.name === "project" ? "true" : undefined}
+            aria-current={item.name === activeSection ? "location" : undefined}
             onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
               event.preventDefault();
-              reset(index);
+              if (pathname !== "/") {
+                const href = sectionHref(item.name, pathname);
+                triggerRouteTransition({
+                  href,
+                  label: item.transition,
+                  navigate: () => router.push(href),
+                });
+                return;
+              }
               window.dispatchEvent(new CustomEvent("portfolio:request-section", {
-                detail: { section: item.label },
+                detail: { section: item.name },
               }));
             }}
             onPointerEnter={(event) => {
@@ -181,22 +133,9 @@ export function HeaderNav() {
                 window.dispatchEvent(new CustomEvent("portfolio:nav-hover", { detail: { index } }));
               }
             }}
-            onPointerMove={(event) => move(index, event)}
-            onPointerLeave={() => reset(index)}
           >
-            {Array.from(item.label, (character, characterIndex) => (
-              <span
-                className={styles.navChar}
-                style={{ "--char-index": characterIndex } as CSSProperties}
-                key={`${character}-${characterIndex}`}
-              >
-                <span className={styles.navCharRoll} data-char={character}>
-                  {character}
-                </span>
-              </span>
-            ))}
+            {item.name}
           </a>
-        </span>
       ))}
     </nav>
   );

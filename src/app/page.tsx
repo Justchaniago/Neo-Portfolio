@@ -1,20 +1,70 @@
 "use client";
 
 import { useEffect, useRef, type CSSProperties } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import { AntigravityHalo } from "@/components/animations/AntigravityHalo";
 import { HeroPortrait } from "@/components/hero/HeroPortrait";
 import { CurvedMobileTagline } from "@/components/hero/CurvedMobileTagline";
 import { ProjectsExperience } from "@/components/projects/ProjectsExperience";
+import { PROJECTS } from "@/lib/projects";
 import { getPerformanceProfile } from "@/lib/performanceTier";
 import styles from "./Home.module.css";
 
 export default function Home() {
+  const pathname = usePathname();
   const page = useRef<HTMLElement>(null);
   const heroSurface = useRef<HTMLDivElement>(null);
   const portraitLayer = useRef<HTMLDivElement>(null);
   const pageContent = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
+
+  useEffect(() => {
+    if (pathname !== "/") return;
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get("section");
+    if (section !== "project" && section !== "about" && section !== "contact") return;
+    const projectIndex = PROJECTS.findIndex((project) => project.slug === params.get("project"));
+
+    // Fast path for project return when splash is already complete is handled synchronously
+    // before paint in ProjectsExperience useLayoutEffect to prevent any white hero flash.
+    if (section === "project" && document.documentElement.dataset.splashComplete === "true") {
+      return;
+    }
+
+    let observer: MutationObserver | null = null;
+    let cancelled = false;
+    const requestSection = () => {
+      if (cancelled || document.documentElement.dataset.splashComplete !== "true") return;
+      observer?.disconnect();
+      if (section === "project" && projectIndex >= 0) {
+        window.dispatchEvent(new CustomEvent("portfolio:select-project", {
+          detail: { index: projectIndex },
+        }));
+      }
+      if (!(section === "project" && document.documentElement.dataset.projectsActive === "true")) {
+        window.dispatchEvent(new CustomEvent("portfolio:request-section", {
+          detail: { section },
+        }));
+      }
+      window.history.replaceState(null, "", "/");
+    };
+
+    if (document.documentElement.dataset.splashComplete === "true") {
+      queueMicrotask(requestSection);
+    } else {
+      observer = new MutationObserver(requestSection);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-splash-complete"],
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+    };
+  }, [pathname]);
 
   useEffect(() => {
     getPerformanceProfile();
@@ -200,7 +250,7 @@ export default function Home() {
 
         <span className="sr-only">Software Engineer. Creative Developer. Interaction Designer.</span>
 
-        <div className={styles.heroCopy} aria-label="Freelance Software Engineer">
+        <div className={styles.heroCopy}>
           <span className={styles.heroArrow} aria-hidden="true">↘</span>
           <p className={styles.heroLineMask}>
             <span className={styles.heroLine} style={{ "--line-index": 0 } as CSSProperties}>Freelance</span>

@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname, useRouter } from "next/navigation";
 import gsap from "gsap";
 import { ArrowUpRight, Check } from "lucide-react";
+import { triggerRouteTransition } from "@/components/projects/ProjectTransition";
 import styles from "./CommandPalette.module.css";
 
 type CommandItem = {
@@ -16,6 +18,8 @@ type CommandItem = {
 };
 
 export function CommandPalette() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState("");
@@ -27,6 +31,7 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+  const [routeAfterClose, setRouteAfterClose] = useState<string | null>(null);
 
   const dispatchCommand = (id: CommandItem["id"]) => {
     if (id === "projects") {
@@ -52,14 +57,26 @@ export function CommandPalette() {
 
   const closePalette = (actionToRun?: CommandItem["id"]) => {
     if (closing) return;
+    let route: string | null = null;
     if (actionToRun) {
-      dispatchCommand(actionToRun);
+      const projectSlug = pathname.startsWith("/projects/") ? pathname.split("/")[2] : "";
+      if (pathname !== "/" && actionToRun === "home") {
+        route = "/";
+      } else if (pathname !== "/" && actionToRun === "projects") {
+        route = projectSlug ? `/?section=project&project=${projectSlug}` : "/?section=project";
+      } else if (pathname !== "/" && (actionToRun === "about" || actionToRun === "contact")) {
+        route = `/?section=${actionToRun}`;
+      } else {
+        dispatchCommand(actionToRun);
+      }
     }
+    setRouteAfterClose(route);
     setClosing(true);
   };
 
   const openPalette = () => {
     setClosing(false);
+    setRouteAfterClose(null);
     setCopied(false);
     setQuery("");
     setActiveIndex(0);
@@ -77,13 +94,36 @@ export function CommandPalette() {
     gsap.killTweensOf([scrim, surface]);
 
     if (closing) {
+      const finishClose = () => {
+        const route = routeAfterClose;
+        setClosing(false);
+        setMounted(false);
+        setQuery("");
+        setActiveIndex(0);
+        setCopied(false);
+        setRouteAfterClose(null);
+        if (route) {
+          requestAnimationFrame(() => {
+            const label =
+              route === "/"
+                ? "CHANIAGO.ME"
+                : route.includes("section=project")
+                  ? "INDEX / PROJECTS"
+                  : route.includes("section=about")
+                    ? "02 — ABOUT"
+                    : "03 — CONTACT";
+            triggerRouteTransition({
+              href: route,
+              label,
+              navigate: () => router.push(route),
+            });
+          });
+        }
+      };
+
       if (reduced) {
         const frame = requestAnimationFrame(() => {
-          setClosing(false);
-          setMounted(false);
-          setQuery("");
-          setActiveIndex(0);
-          setCopied(false);
+          finishClose();
         });
         return () => cancelAnimationFrame(frame);
       }
@@ -100,13 +140,7 @@ export function CommandPalette() {
         duration: 0.26,
         ease: "power3.inOut",
         overwrite: true,
-        onComplete: () => {
-          setClosing(false);
-          setMounted(false);
-          setQuery("");
-          setActiveIndex(0);
-          setCopied(false);
-        },
+        onComplete: finishClose,
       });
       return;
     }
@@ -135,7 +169,7 @@ export function CommandPalette() {
       },
     );
     inputRef.current?.focus({ preventScroll: true });
-  }, [closing, mounted]);
+  }, [closing, mounted, routeAfterClose, router]);
 
   const executeItem = async (id: CommandItem["id"]) => {
     if (closing) return;

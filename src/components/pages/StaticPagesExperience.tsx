@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
 import { getPerformanceProfile } from "@/lib/performanceTier";
+import { pageMotion, sheetDuration } from "@/lib/pageMotion";
+import { ContactPage } from "./ContactPage";
 import styles from "./StaticPagesExperience.module.css";
 
 type StaticSection = "about" | "contact";
@@ -72,8 +74,8 @@ export function StaticPagesExperience() {
       scale: reduced ? 1 : 0.965,
       y: reduced ? 0 : -14,
       filter: reduced || !useFilter ? "none" : "brightness(0.55)",
-      duration: reduced ? 0 : 0.92,
-      ease: "expo.out",
+      duration: reduced ? 0 : pageMotion.travel,
+      ease: pageMotion.ease,
       overwrite: "auto",
     });
   }, [getLayer, parkSection, readySection]);
@@ -127,8 +129,8 @@ export function StaticPagesExperience() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.to(ratios.current, {
       [section]: 0,
-      duration: reduced ? 0 : 0.92,
-      ease: "expo.out",
+      duration: sheetDuration(ratios.current[section], reduced),
+      ease: pageMotion.ease,
       overwrite: "auto",
       onUpdate: () => apply(section, ratios.current[section]),
       onComplete: () => {
@@ -187,8 +189,9 @@ export function StaticPagesExperience() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.to(ratios.current, {
       [section]: 1,
-      duration: reduced ? 0 : 1.04,
-      ease: "expo.out",
+      // A route curtain already owns the wipe; place the destination behind it.
+      duration: sheetDuration(1 - ratios.current[section], reduced || document.documentElement.dataset.routeTransitioning === "waiting"),
+      ease: pageMotion.ease,
       overwrite: "auto",
       onUpdate: () => apply(section, ratios.current[section]),
       onComplete: () => {
@@ -319,8 +322,8 @@ export function StaticPagesExperience() {
           const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           gsap.to(ratios.current, {
             about: 1,
-            duration: reduced ? 0 : 0.65,
-            ease: "expo.out",
+            duration: sheetDuration(1 - ratios.current.about, reduced),
+            ease: pageMotion.ease,
             overwrite: "auto",
             onUpdate: () => apply("about", ratios.current.about),
           });
@@ -360,8 +363,8 @@ export function StaticPagesExperience() {
           const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           gsap.to(ratios.current, {
             contact: 1,
-            duration: reduced ? 0 : 0.65,
-            ease: "expo.out",
+            duration: sheetDuration(1 - ratios.current.contact, reduced),
+            ease: pageMotion.ease,
             overwrite: "auto",
             onUpdate: () => apply("contact", ratios.current.contact),
           });
@@ -401,7 +404,7 @@ function PageContent({
     const parts = element.querySelectorAll<HTMLElement>("[data-page-part]");
     if (!ready) {
       if (!hasInitialized.current) {
-        gsap.set(parts, { autoAlpha: 0, y: reduced ? 0 : 30 });
+        gsap.set(parts, { autoAlpha: 0, y: reduced ? 0 : pageMotion.lift });
         return;
       }
       // Keep typography visible on the receding card while the incoming card slides up over it
@@ -417,15 +420,14 @@ function PageContent({
     hasInitialized.current = true;
     const entrance = gsap.fromTo(
       parts,
-      { autoAlpha: 0, y: reduced ? 0 : 30, rotate: reduced ? 0 : 0.8 },
+      { autoAlpha: 0, y: reduced ? 0 : pageMotion.lift },
       {
         autoAlpha: 1,
         y: 0,
-        rotate: 0,
-        duration: reduced ? 0 : 0.65,
-        delay: reduced ? 0 : 0.22,
-        stagger: reduced ? 0 : 0.07,
-        ease: "power3.out",
+        duration: reduced ? 0 : pageMotion.content,
+        delay: reduced ? 0 : 0.1,
+        stagger: reduced ? 0 : pageMotion.stagger,
+        ease: pageMotion.ease,
         overwrite: true,
         clearProps: "transform",
       },
@@ -433,17 +435,23 @@ function PageContent({
     return () => { entrance.kill(); };
   }, [ready]);
 
+  if (section === "contact") {
+    return (
+      <div ref={root} style={{ height: "100%", width: "100%" }}>
+        <ContactPage ready={ready} onClose={onClose} />
+      </div>
+    );
+  }
+
   return (
     <div ref={root} className={`${styles.page} ${ready ? styles.ready : ""}`}>
       <span className={styles.grid} aria-hidden="true" />
       <p className={styles.eyebrow} data-page-part>
-        0{sections.indexOf(section) + 2} / {section}
+        0{sections.indexOf(section) + 2}
       </p>
       <h1 data-page-part>{section}</h1>
       <p className={styles.placeholder} data-page-part>
-        {section === "about"
-          ? "A closer look at the engineering craft, systems thinking, and creative direction behind the work."
-          : "Let’s build something extraordinary together — available for select collaborations and roles."}
+        A closer look at the engineering craft, systems thinking, and creative direction behind the work.
       </p>
       <div className={styles.actions} data-page-part>
         <button type="button" className={styles.returnButton} onClick={onClose}>

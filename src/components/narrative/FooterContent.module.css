@@ -27,7 +27,7 @@
 }
 .invitation {
   margin: 0;
-  font-family: "Space Grotesk", "Google Sans Flex", sans-serif;
+  font-family: var(--font-space-grotesk), var(--font-google-sans-flex), sans-serif;
   font-size: clamp(1.8rem, 6.8vw, 3rem);
   font-weight: 500;
   letter-spacing: -0.055em;

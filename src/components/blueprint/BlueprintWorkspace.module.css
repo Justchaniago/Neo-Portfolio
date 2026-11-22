@@ -1,0 +1,62 @@
+.section {
+  position: relative;
+  z-index: 0;
+  height: 210svh;
+}
+
+/* Only the drawing extends under its neighbours. Chapter anchors stay in normal flow. */
+.track { position: absolute; inset: -100dvh 0; }
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: hidden;
+  background: #1f45b4;
+}
+
+.surface, .vignette, .notes { position: absolute; inset: 0; }
+.surface canvas { display: block; width: 100%; height: 100%; }
+.poster { object-fit: cover; transform: scale(var(--poster-scale, 1)); }
+.stage[data-live] .poster { visibility: hidden; }
+.vignette {
+  background: radial-gradient(ellipse at 50% 55%, transparent 35%, rgb(8 16 50 / 28%) 100%);
+  pointer-events: none;
+}
+.notes {
+  opacity: 0;
+  color: #e9eeff;
+  font: 500 clamp(10px, 0.9vw, 13px)/1.35 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+.stage:not([data-live]) .notes { visibility: hidden; }
+.coords, .stamp {
+  position: absolute;
+  display: grid;
+  gap: 0.3em;
+}
+.coords {
+  top: max(5.5rem, calc(env(safe-area-inset-top) + 4.5rem));
+  left: max(20px, 3vw, env(safe-area-inset-left));
+}
+.stamp {
+  right: max(20px, 3vw, env(safe-area-inset-right));
+  bottom: max(20px, 4svh, env(safe-area-inset-bottom));
+  padding: 0.8em 1em;
+  border: 1px solid currentColor;
+  background: rgb(18 38 100 / 52%);
+}
+.dimension {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.1em 0.45em;
+  background: #1f45b4;
+}
+
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .section { height: 100svh; }
+  .track { inset: 0; }
+  .stage { position: relative; height: 100%; transform: none !important; }
+  .poster { object-fit: contain; transform: none !important; }
+}

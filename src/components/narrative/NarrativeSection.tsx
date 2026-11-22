@@ -326,7 +326,7 @@ export function NarrativeSection() {
   }, []);
 
   return (
-    <section ref={section} className={styles.section} aria-label="A little about the work">
+    <section ref={section} className={styles.section} data-home-chapter="CRAFT" aria-label="A little about the work">
       <div ref={stage} className={styles.stage}>
         <canvas ref={canvasRef} className={styles.burst} aria-hidden="true" />
         <div ref={copyRef} className={styles.copy}>

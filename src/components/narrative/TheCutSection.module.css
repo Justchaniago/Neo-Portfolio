@@ -1,0 +1,320 @@
+.section {
+  --ink: #0a0a0a;
+  --rest: #767676;
+  --ghost: #8f8f8f;
+  position: relative;
+  background: #fff;
+  color: var(--ink);
+}
+
+.track { position: relative; --proof-run: 0px; }
+.proofRun {
+  position: absolute;
+  width: 1px;
+  height: var(--proof-run);
+  right: 0;
+  bottom: min(100dvh, 100%);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .section[data-proof] {
+    --paper: color-mix(in srgb, white, #1f45b4 calc(var(--proof) * 100%));
+    --edge: color-mix(in srgb, #1f45b4, #eef5ff calc(var(--proof) * 100%));
+    --guide: color-mix(in srgb, var(--edge) calc(var(--proof) * 58%), transparent);
+    --gutter: max(20px, env(safe-area-inset-left));
+    background: var(--paper);
+  }
+  .section[data-proof="negative"] { --ink: #f2f6ff; --rest: #d6e4ff; }
+  .section[data-proof] .proofRun::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    height: max(4.75rem, calc(env(safe-area-inset-top) + 4rem));
+    z-index: 4;
+    opacity: var(--proof);
+    background: linear-gradient(var(--paper) 72%, transparent);
+    pointer-events: none;
+  }
+  /* Register both layouts to the same sheet while the printing changes. */
+  .section[data-proof]::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: var(--proof);
+    background:
+      linear-gradient(90deg, rgb(235 246 255 / 45%) 1px, transparent 1px) var(--gutter) 0 / calc(100% - 2 * var(--gutter)) 100%,
+      linear-gradient(90deg, rgb(235 246 255 / 19%) 1px, transparent 1px) var(--gutter) 0 / 32px 32px,
+      linear-gradient(rgb(235 246 255 / 19%) 1px, transparent 1px) 0 0 / 32px 32px;
+  }
+  .section[data-proof] :is(.lead, .statement, .contact, [data-type-press] h3, [data-type-beat] p) {
+    outline: 1px dashed var(--guide);
+    outline-offset: 4px;
+  }
+  .section[data-proof] :is(.work, [data-type-belt] > span) {
+    -webkit-text-fill-color: rgb(10 10 10 / calc(1 - var(--proof)));
+    -webkit-text-stroke: clamp(0.9px, 0.13vw, 2px) color-mix(in srgb, var(--edge) calc(var(--proof) * 100%), transparent);
+    paint-order: stroke fill;
+  }
+  .section[data-proof] .word::after {
+    content: "";
+    position: absolute;
+    inset: 0 -1.25%;
+    pointer-events: none;
+    border-block: 1px solid var(--guide);
+    background: repeating-linear-gradient(90deg, var(--guide) 0 1px, transparent 1px 12.5%) 0 100% / 100% 7px no-repeat;
+  }
+  .section[data-proof] [data-cut-story] {
+    bottom: var(--hold-top, auto);
+    background: transparent;
+    pointer-events: none;
+  }
+  .section[data-proof] [data-type-press],
+  .section[data-proof] [data-type-beat] {
+    background: transparent;
+  }
+  .section[data-proof]:not([data-pen]) :is([data-type-press], [data-type-beat]) { visibility: hidden; }
+  .section[data-pen] .word::after, .section[data-pen] .contact > svg:not([data-pen-layer]) {
+    opacity: clamp(0, 1 - var(--write) * 3, 1);
+  }
+  .section[data-pen] .stage { --guide: color-mix(in srgb, var(--edge) calc(clamp(0, 1 - var(--write) * 3, 1) * 58%), transparent); }
+  .section[data-pen] .contact > span { opacity: clamp(0, 1 - var(--write) * 3, 1); }
+  .section[data-pen] [data-type-rail] { transform: scaleX(clamp(0, (var(--write) - 0.35) * 3, 1)); transform-origin: left; }
+  .section[data-pen] [data-type-beat] p { outline-color: transparent; }
+  .section[data-pen] [data-type-press] h3 { outline-color: color-mix(in srgb, transparent, var(--guide) calc(clamp(0, (var(--write) - 0.29) * 3, 1) * 100%)); }
+  .section[data-pen][data-proof] [data-pen-host] {
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 0;
+  }
+  .section [data-pen-anchor] { position: relative; }
+  .section [data-pen-layer] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+    overflow: visible;
+    pointer-events: none;
+    font: inherit;
+    font-variation-settings: inherit;
+    fill: var(--ink);
+    stroke: none;
+  }
+  .section[data-pen] [data-pen-layer] { visibility: visible; }
+  .section [data-pen-layer] g {
+    fill: none;
+    stroke: var(--edge);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .section [data-pen-display] text:not([data-pen-fallback]) {
+    fill: #0a0a0a;
+    fill-opacity: calc(1 - var(--proof));
+  }
+  .section [data-pen-display] g {
+    stroke-opacity: var(--proof);
+  }
+  .section[data-proof] [data-type-beat]:not(:first-child) { opacity: clamp(0, (var(--write) - 0.84) * 6.25, 1); }
+}
+
+@media (min-width: 48rem) {
+  .section[data-proof] { --gutter: max(2.5rem, 5vw, env(safe-area-inset-left)); }
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  /* Extend only the white sheet, not the sticky typography or its hit targets. */
+  .section::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 calc(100% - 1px);
+    height: calc(var(--blueprint-lift, 0px) + 1px);
+    background: inherit;
+    clip-path: polygon(0 100%, 100% 0, 100% 100%);
+    pointer-events: none;
+  }
+}
+
+.stage {
+  padding: max(5.5rem, calc(env(safe-area-inset-top) + 4.75rem)) max(20px, env(safe-area-inset-right)) max(2.25rem, calc(env(safe-area-inset-bottom) + 1.5rem)) max(20px, env(safe-area-inset-left));
+}
+
+.stage {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(1.25rem, 3.6svh, 2.75rem);
+  min-height: 100svh;
+  overflow: hidden;
+}
+
+.title { margin: 0; font-size: inherit; font-weight: inherit; }
+
+.lead {
+  display: block;
+  max-width: 18em;
+  font-size: clamp(1.375rem, 2.6vw, 2.5rem);
+  font-size: clamp(1.375rem, 2.7cqw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+/* "busywork." at width 62 is 3.515em long, so it runs from edge to edge. */
+.word {
+  --word-em: 3.515;
+  --word-lines: 1;
+  --busy-rest: 62;
+  position: relative;
+  display: block;
+  height: calc(100cqw / var(--word-em) * var(--word-lines));
+  font-size: var(--cut-size, calc(100cqw / var(--word-em)));
+  font-variation-settings: "wdth" var(--cut-from, 62), "opsz" 144;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.busy {
+  position: relative;
+  display: inline-block;
+  color: inherit;
+  font-variation-settings: "wdth" var(--cut-busy, var(--busy-rest)), "opsz" 144;
+  text-decoration: none;
+}
+
+.work { display: inline-block; }
+
+/* Variable glyphs overhang their advance (the top-left of "w"), and Safari only repaints
+   the box. The padding takes in that ink; the negative margin keeps the letters in place. */
+.busy, .work {
+  --ink-pad: 0.08em;
+  padding-inline: var(--ink-pad);
+  margin-inline: calc(-1 * var(--ink-pad));
+}
+.ink { color: transparent; }
+.lanes { position: absolute; inset: 0 var(--ink-pad); color: var(--ghost); pointer-events: none; }
+
+.lane {
+  position: absolute;
+  top: var(--top);
+  right: -0.1em;
+  left: -0.1em;
+  height: var(--tall);
+  overflow: hidden;
+  transform: translate3d(calc((var(--lane) - 7) * 0.011em), calc((var(--lane) - 3.5) * 0.011em), 0);
+}
+
+.lane > span { position: absolute; top: calc(-1 * var(--top)); left: 0.1em; }
+
+.foot { display: grid; gap: 0.5rem; }
+
+.statement {
+  max-width: 27em;
+  margin: 0;
+  font-size: clamp(1.25rem, 2vw, 1.875rem);
+  font-size: clamp(1.25rem, 2cqw, 1.875rem);
+  font-weight: 450;
+  letter-spacing: -0.03em;
+  line-height: 1.26;
+  text-wrap: pretty;
+}
+
+.contact {
+  display: inline-block;
+  justify-self: start;
+  max-width: 100%;
+  padding-block: max(0.2em, calc(22.5px - 0.55em));
+  color: var(--ink);
+  font-size: clamp(1.25rem, 2vw, 1.875rem);
+  font-size: clamp(1.25rem, 2cqw, 1.875rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* A drawn underline that follows the words onto a second line when the text is enlarged. */
+.contact > span {
+  padding-bottom: 0.14em;
+  background: linear-gradient(currentColor, currentColor) 0 100% / calc(var(--cut-draw, 1) * 100%) 2px no-repeat;
+}
+
+.contact svg:not([data-pen-layer]) {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.14em;
+  stroke-width: 2.2;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.contact:active { transform: translate3d(0, 1px, 0); }
+.contact:focus-visible { outline: 2px solid #dfa13d; outline-offset: 6px; border-radius: 2px; }
+
+@media (hover: hover) {
+  .contact:hover svg:not([data-pen-layer]) { transform: translate3d(0.12em, -0.12em, 0); }
+}
+
+.section[data-cut-motion="live"] .work { position: absolute; top: 0; right: 0; }
+.section[data-cut-motion="live"] .ink { color: inherit; }
+.section[data-cut-motion="live"] .lanes { visibility: hidden; color: inherit; }
+.section[data-cut-motion="live"] .lane { transform: none; }
+.section[data-cut-motion="live"] .busy[data-cut-sliced="true"] .ink { color: transparent; }
+.section[data-cut-motion="live"] .busy[data-cut-sliced="true"] .lanes { visibility: visible; }
+.section[data-cut-motion="live"] .statement span { color: var(--rest); transition: color 200ms ease; }
+.section[data-cut-motion="live"] .statement span[data-cut-on="true"] { color: inherit; }
+.section[data-cut-active="true"] .lane { will-change: transform; }
+
+@media (min-width: 48rem) {
+  .stage { padding-inline: max(2.5rem, 5vw, env(safe-area-inset-left)) max(2.5rem, 5vw, env(safe-area-inset-right)); }
+  .foot { grid-template-columns: minmax(0, 1fr) auto; align-items: end; column-gap: 3rem; }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-height: 36rem) {
+  .track { height: calc(320svh + var(--proof-run)); }
+  .stage { position: sticky; top: 0; height: 100dvh; min-height: 0; }
+  .word { height: calc(var(--word-lines) * 1em); }
+}
+
+.coverRun { scroll-margin-top: 100dvh; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) and (scripting: enabled) {
+  /* Overlap one viewport so both live layouts stay pinned to the same paper. */
+  .track { margin-bottom: -100dvh; }
+  .proofRun { bottom: 200dvh; }
+  /* A flow spacer (not padding) gives the sticky story room under Narrative. */
+  .section { margin-bottom: -100dvh; }
+  .coverRun { height: 100dvh; }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-height: 36rem) and (forced-colors: none) and (scripting: enabled) {
+  .track { --proof-run: 64svh; height: calc(320svh + var(--proof-run) + 100dvh); }
+}
+@media (prefers-reduced-motion: no-preference) and (max-height: 35.999rem) and (forced-colors: none) and (scripting: enabled) {
+  .track { --proof-run: 52svh; }
+  .track::after { content: ""; display: block; height: calc(70svh + var(--proof-run) + 100dvh); }
+  .stage { position: sticky; top: var(--stage-rest, auto); }
+}
+
+/* Upright screens: one line each, both edge to edge. "work." at width 62 is 1.909em long. */
+@media (max-aspect-ratio: 4/5) {
+  .word { --word-em: 1.909; --word-lines: 2; --busy-rest: 86.5; }
+  .busy, .work { display: block; width: max-content; }
+  .section[data-cut-motion="live"] .busy { position: absolute; top: 0; left: 0; }
+  .section[data-cut-motion="live"] .work { top: auto; right: auto; bottom: 0; left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact svg { transition: none; }
+}
+
+@media (forced-colors: active) {
+  .lanes { display: none; }
+  .ink { color: CanvasText; text-decoration: line-through; }
+}

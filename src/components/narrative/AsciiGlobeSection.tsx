@@ -213,6 +213,15 @@ export function AsciiGlobeSection() {
       }
     };
     const wake = () => { if (!raf && !disposed && visible && !document.hidden) raf = requestAnimationFrame(tick); };
+    const visibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        last = 0;
+      } else {
+        wake();
+      }
+    };
     const scroll = () => {
       const nextTarget = clamp((scroller.scrollTop - top) / travel);
       if (Math.abs(nextTarget - target) < 0.0001 && Math.abs(nextTarget - current) < 0.0001) return;
@@ -314,7 +323,7 @@ export function AsciiGlobeSection() {
     canvas.addEventListener("pointercancel", pointerEnd, { passive: true });
     canvas.addEventListener("pointerleave", pointerLeave, { passive: true });
     reduced.addEventListener("change", resize);
-    document.addEventListener("visibilitychange", wake);
+    document.addEventListener("visibilitychange", visibility);
     resize();
     fetch("/maps/earth.json", { signal: controller.signal })
       .then(response => { if (!response.ok) throw new Error("Map unavailable"); return response.json(); })
@@ -340,12 +349,12 @@ export function AsciiGlobeSection() {
       canvas.removeEventListener("pointercancel", pointerEnd);
       canvas.removeEventListener("pointerleave", pointerLeave);
       reduced.removeEventListener("change", resize);
-      document.removeEventListener("visibilitychange", wake);
+      document.removeEventListener("visibilitychange", visibility);
     };
   }, []);
 
   return (
-    <section ref={sectionRef} className={styles.section} aria-label="From the world to Surabaya, Indonesia">
+    <section ref={sectionRef} className={styles.section} data-home-chapter="ORIGIN" aria-label="From the world to Surabaya, Indonesia">
       <div className={styles.stickyContainer}>
         <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
         <p ref={captionRef} className={styles.caption}>A world of possibilities. A place to call home.</p>
