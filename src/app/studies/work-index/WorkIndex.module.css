@@ -1,0 +1,37 @@
+.reader {
+  --paper: #f5f3eb;
+  --ink: #201f1b;
+  --mark: #a03620;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--paper);
+  color: var(--ink);
+}
+.sheet { margin: 0 auto; max-width: 1840px; padding: clamp(100px, 13vh, 158px) 5vw 10vh; }
+.colophon { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--ink); font-size: 14px; }
+.colophon h1, .colophon a { display: inline-flex; align-items: center; min-height: 44px; }
+.colophon span { font: italic 1rem Georgia, serif; }
+.lettering { display: block; width: fit-content; font-family: var(--font-google-sans-flex), sans-serif; font-size: clamp(58px, 7.6vw, 140px); font-weight: 530; font-variation-settings: "wdth" 88, "opsz" 100; line-height: .92; letter-spacing: -.058em; }
+.note a:focus-visible, .colophon a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+@media (hover: hover) { .colophon a:hover, .note a:hover { color: var(--mark); } }
+.detail > h1 { margin: 2rem 0 1.6rem; outline: none; }
+.proof { display: grid; grid-template-columns: 1.65fr 1fr; gap: 5vw; align-items: start; }
+.proof > * { min-width: 0; }
+.retail { display: grid; justify-items: center; padding: clamp(20px, 3vw, 54px); gap: 1rem; }
+.retail img { width: auto; max-width: 100%; height: auto; max-height: 58vh; }
+.retail figcaption { font-size: .875rem; }
+.note p { max-width: 32ch; font: clamp(1.35rem, 2.4vw, 2.5rem)/1.16 Georgia, serif; }
+.note a { display: inline-flex; gap: .75em; align-items: center; min-height: 44px; margin-top: 1.25rem; border-bottom: 1px solid; }
+@media (max-width: 700px) {
+  .sheet { padding-inline: 5vw; }
+  .lettering { font-size: clamp(42px, 10.8vw, 74px); }
+  .proof { grid-template-columns: 1fr; gap: 1.5rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.reader)::view-transition-group(*) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.32,0,.18,1); }
+  @supports not (view-transition-name: work) {
+    .detail .proof { animation: unfold 520ms cubic-bezier(.22,.68,.25,1) both; }
+  }
+}
+@keyframes unfold { from { clip-path: inset(0 0 100%); } to { clip-path: inset(0); } }

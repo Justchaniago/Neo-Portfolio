@@ -1,0 +1,37 @@
+.impression { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.impression [data-sheet] p:first-child { opacity: calc(1 - var(--read-after,0)); transform: none; }
+.impression [data-sheet] p+p { opacity: var(--read-after,0); transform: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The incoming print rides its leading edge, rather than standing still behind a wipe. */
+  .impression [data-sheet] > div {
+    transform: translateY(calc(24% * var(--feed,0) - 7% * var(--recede))) scale(calc(1 - .045 * var(--recede)));
+    transform-origin: 50% 16%;
+  }
+  .impression [data-sheet]::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: var(--ink); opacity: calc(.15 * var(--recede));
+  }
+  /* Units roll first. The tens carry only after the counter crosses zero. */
+  .impression [data-kind="gong-cha-vip"] b {
+    --t: clamp(0,calc(var(--beat)*1.7 - (1 - var(--order))*.7),1);
+  }
+  .impression [data-kind="gong-cha-vip"] [data-rule] i {
+    width: calc(100% / 30); transform: scaleX(clamp(0,calc(var(--beat)*2 - 1),1)); transform-origin: right;
+  }
+  .impression [data-kind="gong-cha-spin"] [data-after] b:first-child,
+  .impression [data-kind="vimax"] [data-after] b:first-child { transform: none; }
+  .impression [data-kind="gong-cha-spin"] [data-after="true"] b:first-child,
+  .impression [data-kind="vimax"] [data-after="true"] b:first-child { visibility: hidden; }
+  /* Expose a full-size crop of the product through the expanding rule, never stretch its pixels. */
+  html:has(.impression)::view-transition-group(proof-gong-cha-vip),
+  html:has(.impression)::view-transition-group(proof-gong-cha-spin),
+  html:has(.impression)::view-transition-group(proof-neo-avo),
+  html:has(.impression)::view-transition-group(proof-vimax),
+  html:has(.impression)::view-transition-group(proof-gong-cha-workspace) { overflow: hidden; animation-duration: 720ms; }
+  html:has(.impression)::view-transition-new(proof-gong-cha-vip),
+  html:has(.impression)::view-transition-new(proof-gong-cha-spin),
+  html:has(.impression)::view-transition-new(proof-neo-avo),
+  html:has(.impression)::view-transition-new(proof-vimax),
+  html:has(.impression)::view-transition-new(proof-gong-cha-workspace) { height: 100%; object-fit: cover; object-position: center; }
+}

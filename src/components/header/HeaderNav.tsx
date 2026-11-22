@@ -31,7 +31,7 @@ export function HeaderNav() {
       const threshold = mobile.matches ? 24 : 40;
 
       let next = collapsed;
-      if (layerActive || y <= threshold) {
+      if (pathname !== "/" || layerActive || y <= threshold) {
         next = false;
         turnAt = y;
       } else {
