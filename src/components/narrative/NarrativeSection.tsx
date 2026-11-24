@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createBurnEdge } from "./burnEdge";
-import { ARRIVAL_READY, arrivalAt, availableFlight, HEADS_LANDED, ramp, sampleArrival, SKY_REVEALED } from "./globeArrival";
+import { ARRIVAL_READY, arrivalAt, availableFlight, HORIZON_PASSED, ramp, sampleArrival, SKY_REVEALED } from "./globeArrival";
 import { createRadialBurst } from "./radialBurst";
 import styles from "./NarrativeSection.module.css";
 
@@ -166,17 +166,17 @@ export function NarrativeSection() {
       }
       mouseVX *= Math.pow(0.85, dt * 60); mouseVY *= Math.pow(0.85, dt * 60);
       const reveal = ease(phase(p, 0.30, 0.46));
-      const burstExit = ease(phase(taglineProgress, 0.66, 0.80));
-      const destination = availableFlight(scroller, arrivalAt(target));
+      const burstExit = ease(phase(p, 0.62, 0.74));
+      const destination = availableFlight(scroller, arrivalAt(p));
       const flight = sampleArrival(scroller, destination, time);
 
       if (flight < SKY_REVEALED) burst.draw(dt, reveal, speed, smoothDirection, reveal, burstExit, flight);
 
       captions.forEach(caption => {
         const enter = ease(phase(taglineProgress, 0.40, 0.50));
-        const leave = ease(phase(taglineProgress, 0.64, 0.75));
-        const visibilityAlpha = enter * (1 - leave) * (1 - ramp(flight, 0, .08));
-        const depthScale = 0.95 + enter * 0.05 + leave * leave * 0.22;
+        const leave = ease(phase(taglineProgress, 0.63, 0.73));
+        const visibilityAlpha = enter * (1 - leave) * (1 - ramp(flight, 0, .06));
+        const depthScale = 0.95 + enter * 0.05 + leave * leave * 0.26;
         caption.style.opacity = String(visibilityAlpha);
         caption.style.transform = `translate3d(0, ${((1 - enter) * 22 - leave * 26).toFixed(1)}px, 0) scale(${depthScale.toFixed(3)})`;
       });
@@ -188,8 +188,7 @@ export function NarrativeSection() {
       if (hudRef.current) {
         hudRef.current.dataset.active = String(reading && p < 0.72);
       }
-      const stageFade = 1 - ramp(flight, HEADS_LANDED, SKY_REVEALED);
-      visual.style.opacity = String(stageFade);
+      visual.style.opacity = String(1 - ramp(flight, HORIZON_PASSED, SKY_REVEALED));
       visual.style.pointerEvents = p >= 0.86 ? "none" : "auto";
       const leavingForward = direction > 0 && current >= READING_END && taglineProgress >= 0.69;
       const leavingReverse = direction < 0 && current <= READING_START;
@@ -197,7 +196,7 @@ export function NarrativeSection() {
         readingDone = leavingForward;
         finishReading(current);
       }
-      if ((reveal > 0 && flight === 0) || hasWordMotion || current !== target || flight !== destination || Math.abs(taglineProgress - p) > 0.002) {
+      if ((reveal > 0 && flight < SKY_REVEALED) || hasWordMotion || current !== target || flight !== destination || Math.abs(taglineProgress - p) > 0.002) {
         raf = requestAnimationFrame(render);
       }
     };

@@ -24,10 +24,12 @@ void main() {
   float seed = abs(grain);
   float morph = smoothstep(seed * .12, .87 + seed * .13, pose.z);
   vec2 ball = vec2(x, y) * pose.x;
-  float gather = smoothstep(.27+.075*star.w,.75+.04*star.w,light.x);
+  float gather = smoothstep(.44+.06*star.w,.91+.04*star.w,light.x);
+  float emerge = smoothstep(.0,.30+.04*star.w,light.x);
   if (gather < 1.) {
-    // The sky is centred on the viewport; the planet sits two percent lower.
-    vec2 sky = star.xy * view * .5 + vec2(0.,.02*view.y);
+    // Distant sky fills the entire circular tunnel horizon and zooms forward to full viewport before the mouth clears.
+    float bloom = .56 + .44 * (1. - pow(1. - emerge, 2.2));
+    vec2 sky = star.xy * view * (.5 * bloom) + vec2(0.,.02*view.y*emerge);
     vec2 travel = ball - sky;
     float bow = 4.*gather*(1.-gather)*(.095+.105*star.w);
     ball = sky + travel*gather + vec2(-travel.y,travel.x)*bow;
@@ -45,13 +47,13 @@ void main() {
   vec2 clip = at * 2. / view + vec2(0.,-.04);
   gl_Position = vec4(clip, 0., 1.);
   float rim = pow(1. - abs(depth), 2.);
-  float sun = smoothstep(-.19,.46,mix(-.68*x+.22*y-depth, 1., smoothstep(0.,.35,light.x)));
+  float sun = smoothstep(-.19,.46,mix(-.68*x+.22*y-depth, 1., smoothstep(.40,.72,light.x)));
   float land = step(0.,grain);
   float facing = smoothstep(-.15,.10,depth);
   float alpha = (0.26 + .61 * seed) * (.28 + .72 * land) * (.55 + .40 * facing + .62 * rim);
   alpha *= (.22 + .78 * facing) * sun;
-  float skyAlpha = star.z < 0. ? .50+.45*star.w :
-    (1.-smoothstep(.012,.060,star.z))*(.22+.58*star.w);
+  float skyAlpha = (star.z < 0. ? .56+.42*star.w :
+    (1.-smoothstep(.016,.078,star.z))*(.26+.62*star.w)) * smoothstep(.005,.13,light.x);
   alpha = mix(skyAlpha,alpha,gather);
   vec2 pixel = vec2(at.x + view.x*.5, view.y*.52-at.y);
   float span = view.x + .32 * view.y, feather = max(100., span*.22);
@@ -123,12 +125,12 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
       ctx.clearRect(0,0,w,h);
       if (dissolve >= 1) return;
       const size = Math.max(1, Math.min(2.6, earthRadius(w,h,1)/105));
-      const sun = ramp(flight,0,.35);
+      const sun = ramp(flight,.40,.72), emergeBase = ramp(flight,.005,.13);
       for (let id = 0; id < count; id++) {
         const i = id * 6, s = id * 4;
         const shine = stars[s+3]/SHORT_UNIT, rank = stars[s+2]/SHORT_UNIT;
-        const gather = ramp(flight,.27+.075*shine,.75+.04*shine);
-        if (!gather && rank >= .060) continue;
+        const gather = ramp(flight,.44+.06*shine,.91+.04*shine);
+        if (!gather && rank >= .078) continue;
         const a = data[i]/32767, b = data[i+1]/32767, c = data[i+2]/32767;
         const grain = data[i+5]/32767, seed = Math.abs(grain);
         const m = ramp(blend, seed*.12, .87+seed*.13), forward = a*sx+c*cx;
@@ -140,7 +142,9 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
           dy += scatter*Math.cos(seed*57-progress*14.4+data[i+4]/32767*9);
         }
         if (gather < 1) {
-          const ox = stars[s]/SHORT_UNIT*w*.5, oy = (stars[s+1]/SHORT_UNIT*.5+.02)*h;
+          const emerge = ramp(flight,.0,.30+.04*shine);
+          const bloom = .56 + .44 * (1 - Math.pow(1 - emerge, 2.2));
+          const ox = stars[s]/SHORT_UNIT*w*.5*bloom, oy = (stars[s+1]/SHORT_UNIT*.5*bloom+.02*emerge)*h;
           const vx = dx-ox, vy = dy-oy, bow = 4*gather*(1-gather)*(.095+.105*shine);
           dx = ox+vx*gather-vy*bow; dy = oy+vy*gather+vx*bow;
         }
@@ -159,7 +163,7 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
         const px = w*.5+dx, py = h*.52-dy;
         const alpha = (.38+.6*seed)*(grain > 0 ? 1 : .34)*(z >= 0 ? 1 : .24)
           * ramp((-.68*x+.22*y-z)*(1-sun)+sun,-.19,.46);
-        const skyAlpha = rank < 0 ? .50+.45*shine : (1-ramp(rank,.012,.060))*(.22+.58*shine);
+        const skyAlpha = (rank < 0 ? .56+.42*shine : (1-ramp(rank,.016,.078))*(.26+.62*shine))*emergeBase;
         ctx.globalAlpha = ((skyAlpha*(1-gather)+alpha*gather)*(1-m)+(.44+.45*seed)*m)*fade;
         const shade = Math.max(0,Math.min(1,(px+.32*py-front+feather)/(2*feather)));
         ctx.fillStyle = ink[Math.round(512*shade)];

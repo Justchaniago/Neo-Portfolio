@@ -1,15 +1,16 @@
 // Both canvases share the physical scroll distance, not their independent easing clocks.
-export const ARRIVAL_START = 0.75;
-export const ARRIVAL_END = 0.96;
+export const ARRIVAL_START = 0.736;
+export const ARRIVAL_END = 0.92;
 export const arrivalAt = (craft: number) => Math.max(0, Math.min(1, (craft - ARRIVAL_START) / (ARRIVAL_END - ARRIVAL_START)));
-export const HEADS_LANDED = 0.17;
-export const SKY_REVEALED = 0.27;
-export const daylightAt = (flight: number) => ramp(flight, 0.79, 1);
+export const HORIZON_ENTRY = 0.12;
+export const HORIZON_PASSED = 0.40;
+export const SKY_REVEALED = 0.46;
+export const daylightAt = (flight: number) => ramp(flight, 0.80, 1);
 
 const prepared = new WeakSet<HTMLElement>();
 export const ARRIVAL_READY = "portfolio:arrival-ready";
 export const availableFlight = (host: HTMLElement, wanted: number) =>
-  prepared.has(host) ? wanted : Math.min(HEADS_LANDED, wanted);
+  prepared.has(host) ? wanted : Math.min(HORIZON_ENTRY, wanted);
 export function setArrivalReady(host: HTMLElement, ready: boolean) {
   if (!ready) { prepared.delete(host); return; }
   if (prepared.has(host)) return;
@@ -40,4 +41,4 @@ export function ramp(t: number, a: number, b: number) {
 export const earthRadius = (w: number, h: number, t: number, rimType = false) =>
   // With rim type, leave room for the header above and the lettering around the globe.
   (rimType ? Math.min(w * .40, Math.max(h * .24, (h * .52 - 92) / 1.17)) : Math.min(w * .43, h * .33))
-  * (0.54 + 0.46 * ramp(t, 0.04, 0.92));
+  * (0.54 + 0.46 * ramp(t, 0.40, 0.95));

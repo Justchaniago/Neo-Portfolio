@@ -45,8 +45,8 @@ export function AsciiGlobeSection() {
       // The ink starts below the viewport; lead it in as the last grains fade.
       const rise = phase(q,.47,1);
       const scale = Math.min((width - 32) / 50, Math.max(4, height - 150) / 22);
-      const turning = !!cloud && !reduced.matches && approach >= .80 && p < .64;
-      if (turning) spin = (spin + dt * .009 * phase(approach,.80,.99) * (1-phase(p,.40,.64))) % 360;
+      const turning = !!cloud && !reduced.matches && approach >= .84 && p < .64;
+      if (turning) spin = (spin + dt * .009 * phase(approach,.84,.99) * (1-phase(p,.40,.64))) % 360;
       cloud?.draw({
         progress: p, flight: approach, scale, night: true, spin,
         dissolve: clamp((q - .10) / .44),
@@ -55,8 +55,8 @@ export function AsciiGlobeSection() {
       if (offset !== shownBurn) section.style.setProperty("--burn-offset", `${shownBurn = offset}%`);
       if (!reduced.matches) burn.scrub(rise);
       // The lettering travels clockwise along the rim with scroll, then leaves before the grains scatter.
-      const copy = (phase(approach,.83,1) * (1-phase(p,.27,.40))).toFixed(3);
-      const turn = (-46 + 16 * phase(approach,.80,1) + 96 * clamp(p / .40)).toFixed(2);
+      const copy = (phase(approach,.86,1) * (1-phase(p,.27,.40))).toFixed(3);
+      const turn = (-46 + 16 * phase(approach,.83,1) + 96 * clamp(p / .40)).toFixed(2);
       if (copy !== shownCopy) section.style.setProperty("--global-copy", shownCopy = copy);
       if (turn !== shownTurn) section.style.setProperty("--turn", `${shownTurn = turn}deg`);
       caption.style.opacity = String(phase(p,.75,.89) * (1 - phase(q,.02,.11)));
