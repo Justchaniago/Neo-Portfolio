@@ -2,6 +2,13 @@ import { daylightAt, earthRadius, ramp } from "./globeArrival";
 import { inkRamp } from "./globeInk";
 import { createStarSeeds, SHORT_UNIT } from "./starField";
 
+export const TRACE_COUNT = 12;
+const emptyTrail = new Float32Array(TRACE_COUNT * 4);
+export function globeAngles(progress: number, spin: number, tilt: number) {
+  const focus = ramp(progress, 0, .42), rad = Math.PI / 180;
+  return [(28 + 90 * focus + spin) * rad, (16 - 18.5 * focus + tilt) * rad];
+}
+
 const vertex = `
 attribute vec3 sphere;
 attribute vec2 island;
@@ -13,8 +20,11 @@ uniform vec2 view;
 uniform vec4 camera; // sin/cos longitude, sin/cos latitude
 uniform vec4 pose;   // radius, map pixels/degree, flatten, next shape
 uniform vec4 light;  // arrival, dawn, DPR, grain diameter
-uniform vec2 scatter; // displacement in pixels, phase along each seeded path
+uniform vec2 scatter; // scroll progress during breakup, elapsed drift time
 uniform float dissolve;
+uniform vec2 drift;
+uniform vec4 trail[${TRACE_COUNT}];
+uniform float tracing;
 varying vec4 ink;
 void main() {
   float x = sphere.x * camera.y - sphere.z * camera.x;
@@ -30,13 +40,26 @@ void main() {
     // Distant sky fills the entire circular tunnel horizon and zooms forward to full viewport before the mouth clears.
     float bloom = .56 + .44 * (1. - pow(1. - emerge, 2.2));
     vec2 sky = star.xy * view * (.5 * bloom) + vec2(0.,.02*view.y*emerge);
+    sky += drift * (.08 + .92 * star.w * star.w * star.w);
     vec2 travel = ball - sky;
     float bow = 4.*gather*(1.-gather)*(.095+.105*star.w);
     ball = sky + travel*gather + vec2(-travel.y,travel.x)*bow;
   }
   vec2 map = island * vec2(25.,11.) * pose.y;
   vec2 at = mix(mix(ball, map, morph), nextXY * view * .5, pose.w);
-  at += scatter.x * vec2(sin(seed*93. + scatter.y + island.x*7.), cos(seed*57. - scatter.y*1.2 + island.y*9.));
+  float suspended = 0.;
+  if (scatter.x > 0.) {
+    float pace = star.w;
+    float launch = smoothstep(.35+.09*(1.-pace),.49+.10*(1.-pace),scatter.x);
+    morph = smoothstep(.59+.065*(1.-pace),.76+.06*(1.-pace),scatter.x);
+    suspended = launch*(1.-morph);
+    float phase = scatter.y*(.32+.85*pace)+scatter.x*(5.+9.*pace);
+    float bearing = 3.*sphere.y + 1.9*sphere.z + 1.1*star.x + .56*sin(phase+2.6*sphere.x);
+    float reach = .14+.58*pace*pace;
+    vec2 eddy = vec2(cos(bearing),sin(bearing)) * vec2(min(view.x*.32,pose.x*1.55),pose.x*.80);
+    vec2 driftPath = reach*eddy + pose.x*(.09+.09*pace)*vec2(sin(phase+star.y*4.),cos(phase*.79+star.x*4.));
+    at = mix(ball + launch*driftPath, map, morph);
+  }
   float loose = 0.;
   if (dissolve > 0.) {
     float delay = .36*inland + .14*seed;
@@ -55,6 +78,7 @@ void main() {
   float skyAlpha = (star.z < 0. ? .56+.42*star.w :
     (1.-smoothstep(.016,.078,star.z))*(.26+.62*star.w)) * smoothstep(.005,.13,light.x);
   alpha = mix(skyAlpha,alpha,gather);
+  alpha = mix(alpha,.18+.42*seed,suspended);
   vec2 pixel = vec2(at.x + view.x*.5, view.y*.52-at.y);
   float span = view.x + .32 * view.y, feather = max(100., span*.22);
   float front = mix(-feather,span+feather,light.y);
@@ -62,8 +86,16 @@ void main() {
   vec3 daylight = vec3(.059,.072,.085), dusk = vec3(.145,.20,.23), silver = vec3(.92,.94,.93);
   vec3 color = mix(mix(daylight,dusk,min(1.,night*2.)),silver,max(0.,night*2.-1.));
   ink = vec4(color,mix(alpha, .44+.45*seed, morph)*(1.-smoothstep(.1,1.,loose)));
+  float glint = 0.;
+  if (tracing > 0. && depth > 0.) {
+    for (int i=0; i<${TRACE_COUNT}; i++) {
+      glint = max(glint, trail[i].w * smoothstep(.988, .9995, dot(sphere,trail[i].xyz)));
+    }
+    glint *= tracing * (.24+.76*land);
+    ink.a = min(1.,ink.a+.66*glint);
+  }
   float starSize = star.z < 0. ? 1.15+1.5*star.w : .62+1.15*star.w;
-  gl_PointSize = max(1., light.z * mix(starSize, light.w*(.66+.65*seed+.18*rim*(1.-morph)), gather));
+  gl_PointSize = max(1., light.z * (mix(starSize, light.w*(.66+.65*seed+.18*rim*(1.-morph)), gather)+.7*glint));
 }`;
 const fragment = `
 precision mediump float;
@@ -75,9 +107,10 @@ void main() {
 
 export type PointPose = {
   progress: number; flight: number; scale: number; next?: number; night?: boolean; spin?: number;
-  dissolve?: number;
+  dissolve?: number; driftTime?: number;
+  driftX?: number; driftY?: number; tilt?: number; trail?: Float32Array; tracing?: number;
 };
-const spread = (p: number) => ramp(p,.35,.54) * (1-ramp(p,.54,.80));
+export const dispersing = (p: number) => p > .35 && p < .82;
 
 // Count nearby occupied map cells once. Coastal grains release before interior grains.
 function inlandWeights(points: Int16Array) {
@@ -113,12 +146,12 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
       if (xy.length !== data.length / 3) throw Error("Expected one XY destination per particle");
       target = xy;
     },
-    draw({ progress, flight, scale, next = 0, night = false, spin = 0, dissolve = 0 }: PointPose) {
-      const focus = ramp(progress, 0, .42), rad = Math.PI / 180;
-      const lon = (28 + 90 * focus + spin) * rad, lat = (16 - 18.5 * focus) * rad;
+    draw({ progress, flight, scale, next = 0, night = false, spin = 0, dissolve = 0,
+      driftX = 0, driftY = 0, tilt = 0, trail = emptyTrail, tracing = 0, driftTime = 0 }: PointPose) {
+      const [lon, lat] = globeAngles(progress,spin,tilt);
       const sx = Math.sin(lon), cx = Math.cos(lon), sy = Math.sin(lat), cy = Math.cos(lat);
       const blend = ramp(progress, night ? .53 : .30, .82), radius = earthRadius(w, h, flight, night) * (1 + .24 * blend);
-      const scatter = night ? spread(progress)*Math.min(w,h)*.18 : 0;
+      const scattering = night && dispersing(progress);
       const dawn = night ? 0 : daylightAt(flight), feather = Math.max(100, (w + h*.32)*.22);
       const front = -feather + (w+h*.32+2*feather)*dawn;
       ctx.setTransform(ratio,0,0,ratio,0,0);
@@ -133,23 +166,31 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
         if (!gather && rank >= .078) continue;
         const a = data[i]/32767, b = data[i+1]/32767, c = data[i+2]/32767;
         const grain = data[i+5]/32767, seed = Math.abs(grain);
-        const m = ramp(blend, seed*.12, .87+seed*.13), forward = a*sx+c*cx;
+        const m = scattering ? ramp(progress,.59+.065*(1-shine),.76+.06*(1-shine)) : ramp(blend, seed*.12, .87+seed*.13);
+        const forward = a*sx+c*cx;
         const x = a*cx-c*sx, y = b*cy-forward*sy, z = b*sy+forward*cy;
         let dx = x*radius*(1-m)+data[i+3]/32767*25*scale*m;
         let dy = y*radius*(1-m)+data[i+4]/32767*11*scale*m;
-        if (scatter) {
-          dx += scatter*Math.sin(seed*93+progress*12+data[i+3]/32767*7);
-          dy += scatter*Math.cos(seed*57-progress*14.4+data[i+4]/32767*9);
-        }
         if (gather < 1) {
           const emerge = ramp(flight,.0,.30+.04*shine);
           const bloom = .56 + .44 * (1 - Math.pow(1 - emerge, 2.2));
-          const ox = stars[s]/SHORT_UNIT*w*.5*bloom, oy = (stars[s+1]/SHORT_UNIT*.5*bloom+.02*emerge)*h;
+          const par = .08+.92*shine**3;
+          const ox = stars[s]/SHORT_UNIT*w*.5*bloom + driftX*par, oy = (stars[s+1]/SHORT_UNIT*.5*bloom+.02*emerge)*h + driftY*par;
           const vx = dx-ox, vy = dy-oy, bow = 4*gather*(1-gather)*(.095+.105*shine);
           dx = ox+vx*gather-vy*bow; dy = oy+vy*gather+vx*bow;
         }
         if (target && next) {
           dx += (target[i/3]*w*.5-dx)*next; dy += (target[i/3+1]*h*.5-dy)*next;
+        }
+        let suspended = 0;
+        if (scattering) {
+          suspended = ramp(progress,.35+.09*(1-shine),.49+.10*(1-shine))*(1-m);
+          const phase = driftTime*(.32+.85*shine)+progress*(5+9*shine);
+          const ux = stars[s]/SHORT_UNIT, uy = stars[s+1]/SHORT_UNIT;
+          const bearing = 3*b+1.9*c+1.1*ux+.56*Math.sin(phase+2.6*a);
+          const reach = .14+.58*shine*shine, wobble = radius*(.09+.09*shine);
+          dx += suspended*(reach*Math.cos(bearing)*Math.min(w*.32,radius*1.55)+wobble*Math.sin(phase+uy*4));
+          dy += suspended*(reach*Math.sin(bearing)*radius*.80+wobble*Math.cos(phase*.79+ux*4));
         }
         let fade = 1;
         if (dissolve > 0) {
@@ -164,10 +205,18 @@ export function createPointFallback(canvas: HTMLCanvasElement, bytes: ArrayBuffe
         const alpha = (.38+.6*seed)*(grain > 0 ? 1 : .34)*(z >= 0 ? 1 : .24)
           * ramp((-.68*x+.22*y-z)*(1-sun)+sun,-.19,.46);
         const skyAlpha = (rank < 0 ? .56+.42*shine : (1-ramp(rank,.016,.078))*(.26+.62*shine))*emergeBase;
-        ctx.globalAlpha = ((skyAlpha*(1-gather)+alpha*gather)*(1-m)+(.44+.45*seed)*m)*fade;
+        let glint = 0;
+        if (tracing && z > 0) {
+          for (let j=0; j<trail.length; j+=4) {
+            if (trail[j+3]) glint = Math.max(glint,trail[j+3]*ramp(a*trail[j]+b*trail[j+1]+c*trail[j+2],.988,.9995));
+          }
+          glint *= tracing*(grain >= 0 ? 1 : .24);
+        }
+        const dispersed = (skyAlpha*(1-gather)+alpha*gather)*(1-suspended)+(.18+.42*seed)*suspended;
+        ctx.globalAlpha = Math.min(1,(dispersed*(1-m)+(.44+.45*seed)*m)*fade+.66*glint);
         const shade = Math.max(0,Math.min(1,(px+.32*py-front+feather)/(2*feather)));
         ctx.fillStyle = ink[Math.round(512*shade)];
-        const diameter = (rank < 0 ? 1.15+1.5*shine : .62+1.15*shine)*(1-gather)+size*(.7+.5*seed)*gather;
+        const diameter = (rank < 0 ? 1.15+1.5*shine : .62+1.15*shine)*(1-gather)+size*(.7+.5*seed)*gather+.7*glint;
         ctx.fillRect(px-diameter/2, py-diameter/2, diameter, diameter);
       }
       ctx.globalAlpha = 1;
@@ -222,6 +271,7 @@ export function createPointCloud(canvas: HTMLCanvasElement, bytes: ArrayBuffer) 
     gl.enableVertexAttribArray(inland);
     gl.vertexAttribPointer(inland, 1, gl.FLOAT, false, 0, 0);
     const loc = (name: string) => gl.getUniformLocation(program, name);
+    const driftLoc = loc("drift"), traceLoc = loc("trail[0]"), strengthLoc = loc("tracing");
     const view = loc("view"), cam = loc("camera"), pose = loc("pose"), light = loc("light"), scatter = loc("scatter"), exit = loc("dissolve");
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -244,14 +294,18 @@ export function createPointCloud(canvas: HTMLCanvasElement, bytes: ArrayBuffer) 
         gl.enableVertexAttribArray(destination);
         gl.vertexAttribPointer(destination, 2, gl.FLOAT, false, 0, 0);
       },
-      draw({ progress, flight, scale, next = 0, night = false, spin = 0, dissolve = 0 }: PointPose) {
-        const focus = ramp(progress, 0, .42), zoom = ramp(progress, night ? .53 : .30, .82);
-        const rad = Math.PI / 180, lon = (28 + 90*focus + spin)*rad, lat = (16 - 18.5*focus)*rad;
+      draw({ progress, flight, scale, next = 0, night = false, spin = 0, dissolve = 0,
+        driftX = 0, driftY = 0, tilt = 0, trail = emptyTrail, tracing = 0, driftTime = 0 }: PointPose) {
+        const zoom = ramp(progress, night ? .53 : .30, .82);
+        const [lon,lat] = globeAngles(progress,spin,tilt);
+        gl.uniform2f(driftLoc,driftX,driftY);
+        gl.uniform1f(strengthLoc,tracing);
+        if (tracing) gl.uniform4fv(traceLoc,trail);
         const morph = zoom, radius = earthRadius(width, height, flight, night);
         gl.uniform4f(cam, Math.sin(lon), Math.cos(lon), Math.sin(lat), Math.cos(lat));
         gl.uniform4f(pose, radius * (1 + .24 * zoom), scale, morph, nextBuffer ? Math.min(1,Math.max(0,next)) : 0);
         gl.uniform4f(light, flight, night ? 0 : daylightAt(flight), ratio, diameter);
-        gl.uniform2f(scatter, night ? spread(progress)*Math.min(width,height)*.18 : 0, progress*12);
+        gl.uniform2f(scatter, night && dispersing(progress) ? progress : 0, driftTime);
         gl.uniform1f(exit, dissolve);
         gl.clear(gl.COLOR_BUFFER_BIT);
         if (dissolve < 1) gl.drawArrays(gl.POINTS, 0, budget);

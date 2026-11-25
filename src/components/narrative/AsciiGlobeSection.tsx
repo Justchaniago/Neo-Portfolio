@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { getPerformanceProfile, onPerformanceTierChange } from "@/lib/performanceTier";
 import styles from "./AsciiGlobeSection.module.css";
 import { ARRIVAL_END, arrivalAt, availableFlight, earthRadius, ramp as phase, sampleArrival, setArrivalReady } from "./globeArrival";
-import { createPointCloud, createPointFallback } from "./pointCloud";
+import { createPointCloud, createPointFallback, dispersing, globeAngles, TRACE_COUNT } from "./pointCloud";
 import { createBurnEdge } from "./burnEdge";
 
 // Keep the map exit inside its existing scroll distance.
@@ -16,6 +16,7 @@ export function AsciiGlobeSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const edgeRef = useRef<HTMLCanvasElement>(null);
+  const meteorRef = useRef<HTMLSpanElement>(null);
   const captionRef = useRef<HTMLParagraphElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -35,9 +36,39 @@ export function AsciiGlobeSection() {
     let width = 0, height = 0, dpr = 1, top = 0, travel = 1;
     let target = 0, current = 0, raf = 0, last = 0;
     let visible = false, disposed = false, primed = false;
-    let spin = 0;
+    let spin = 0, driftTime = 0;
     let shownCopy = "", shownTurn = "", shownBurn = "", tail = 0;
     let craftTravel = 1, craftTop = 0, approach = 1, wantedApproach = 1, arrivalDistance = 0;
+    const fine = matchMedia("(any-hover: hover) and (any-pointer: fine)");
+    const trail = new Float32Array(TRACE_COUNT*4);
+    let px=0, py=0, easedX=0, easedY=0, sample=false, slot=0, left=0, screenTop=0;
+    let tap: {id:number; x:number; y:number} | null = null;
+    let skyActive=false, meteorTimer=0, streak: Animation | null=null;
+    const scheduleMeteor = (first: boolean) => {
+      meteorTimer = window.setTimeout(() => {
+        const el = meteorRef.current;
+        if (!el || !skyActive || document.hidden || disposed) return;
+        const right = Math.random() < .5;
+        const dx = (right ? 1 : -1)*Math.min(width*.09,95), dy=Math.abs(dx)*(.26+Math.random()*.27);
+        const angle = Math.atan2(dy,dx)*180/Math.PI;
+        el.style.left = `${(right ? 12 : 58)+Math.random()*28}%`;
+        el.style.top = `${16+Math.random()*52}%`;
+        el.style.width = `${Math.min(26,Math.abs(dx)*.38)}px`;
+        const pose = (t:number) => `translate(${dx*t}px,${dy*t}px) rotate(${angle}deg)`;
+        streak = el.animate([{transform:pose(0),opacity:0},{transform:pose(.27),opacity:.55,offset:.27},
+          {transform:pose(1),opacity:0}],{duration:900+Math.random()*550,easing:"linear"});
+        scheduleMeteor(false);
+      }, (first ? 2800+Math.random()*3600 : 11000+Math.random()*14000));
+    };
+    const meteorState = (on:boolean) => {
+      if (skyActive===on) return;
+      skyActive=on;
+      if (on) scheduleMeteor(true);
+      else { clearTimeout(meteorTimer); streak?.cancel(); streak=null; }
+    };
+    const resetInput = () => {
+      px=py=easedX=easedY=0; sample=false; tap=null; trail.fill(0); meteorState(false);
+    };
     const draw = (dt: number) => {
       const distance = current * travel, mapTravel = travel - tail;
       const p = reduced.matches ? 1 : clamp((distance - arrivalDistance) / Math.max(1, mapTravel - arrivalDistance));
@@ -46,9 +77,41 @@ export function AsciiGlobeSection() {
       const rise = phase(q,.47,1);
       const scale = Math.min((width - 32) / 50, Math.max(4, height - 150) / 22);
       const turning = !!cloud && !reduced.matches && approach >= .84 && p < .64;
+      const drifting = !!cloud && !reduced.matches && dispersing(p);
+      if (drifting) driftTime += dt / 1000;
       if (turning) spin = (spin + dt * .009 * phase(approach,.84,.99) * (1-phase(p,.40,.64))) % 360;
+      const active = !reduced.matches && visible && !!cloud && approach>.40 && p<.4;
+      if (!active) resetInput();
+      meteorState(active && approach>.455 && approach<.68);
+      const settle = -Math.expm1(-dt/155);
+      easedX += (px-easedX)*settle; easedY += (py-easedY)*settle;
+      const skyWeight = phase(approach,.40,.50);
+      const globeWeight = phase(approach,.70,.93)*(1-phase(p,.27,.40));
+      const yaw = spin-easedX*3*globeWeight, tilt = easedY*2.4*globeWeight;
+      let lit=false;
+      for (let j=3; j<trail.length; j+=4) {
+        trail[j]=Math.max(0,trail[j]-dt/950);
+        if (trail[j]) lit=true;
+      }
+      if (sample && globeWeight>.6) {
+        const r=earthRadius(width,height,approach,true);
+        const x=hitX/r, y=hitY/r, z2=1-x*x-y*y;
+        if (z2>0) {
+          // Invert the rendered camera rotation so the mark stays on the same grains.
+          const [lon,lat]=globeAngles(p,yaw,tilt), z=Math.sqrt(z2);
+          const forward=z*Math.cos(lat)-y*Math.sin(lat);
+          const j=slot*4;
+          trail[j]=x*Math.cos(lon)+forward*Math.sin(lon);
+          trail[j+1]=y*Math.cos(lat)+z*Math.sin(lat);
+          trail[j+2]=forward*Math.cos(lon)-x*Math.sin(lon);
+          trail[j+3]=1; slot=(slot+1)%TRACE_COUNT; lit=true;
+        }
+      }
+      sample=false;
       cloud?.draw({
-        progress: p, flight: approach, scale, night: true, spin,
+        progress: p, flight: approach, scale, night: true, spin:yaw, tilt, driftTime,
+        driftX:-10*easedX*skyWeight, driftY:8*easedY*skyWeight,
+        trail, tracing:lit ? globeWeight : 0,
         dissolve: clamp((q - .10) / .44),
       });
       const offset = ((1 - rise) * 100).toFixed(3);
@@ -61,7 +124,7 @@ export function AsciiGlobeSection() {
       if (turn !== shownTurn) section.style.setProperty("--turn", `${shownTurn = turn}deg`);
       caption.style.opacity = String(phase(p,.75,.89) * (1 - phase(q,.02,.11)));
       caption.style.top = `${height * .52 + 11 * scale + 12}px`;
-      return turning;
+      return turning || drifting || lit || Math.abs(px-easedX)+Math.abs(py-easedY)>.001;
     };
 
     const tick = (time: number) => {
@@ -79,8 +142,34 @@ export function AsciiGlobeSection() {
       }
     };
     const wake = () => { if (!raf && !disposed && visible && !document.hidden) raf = requestAnimationFrame(tick); };
+    let hitX=0, hitY=0;
+    const point = (e:PointerEvent, touch=false) => {
+      if (!visible || reduced.matches || !cloud || approach<.4 ||
+          (e.target instanceof Element && e.target.closest("a,button,[role=button]"))) return;
+      hitX=e.clientX-left-width*.5; hitY=screenTop+height*.52-e.clientY;
+      if (!touch) {
+        px=Math.max(-1,Math.min(1,hitX/(width*.5)));
+        py=Math.max(-1,Math.min(1,(e.clientY-screenTop-height*.5)/(height*.5)));
+      }
+      sample=true; wake();
+    };
+    const events={passive:true,signal:controller.signal};
+    scroller.addEventListener("pointermove",e=>{
+      if (e.pointerType!=="touch" && fine.matches) point(e);
+      if (tap && Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8) tap=null;
+    },events);
+    scroller.addEventListener("pointerleave",()=>{ px=py=0; sample=false; wake(); },events);
+    scroller.addEventListener("pointerdown",e=>{
+      if (e.pointerType==="touch") tap={id:e.pointerId,x:e.clientX,y:e.clientY};
+    },events);
+    scroller.addEventListener("pointerup",e=>{
+      if (tap?.id===e.pointerId && Math.hypot(e.clientX-tap.x,e.clientY-tap.y)<8) point(e,true);
+      tap=null;
+    },events);
+    scroller.addEventListener("pointercancel",()=>{tap=null;},events);
     const visibility = () => {
       if (document.hidden) {
+        resetInput();
         cancelAnimationFrame(raf);
         raf = 0;
         last = 0;
@@ -100,6 +189,8 @@ export function AsciiGlobeSection() {
     const resize = () => {
       if (!primed) return;
       const w = field.clientWidth, h = field.clientHeight;
+      const viewport=scroller.getBoundingClientRect();
+      left=viewport.left; screenTop=viewport.top;
       const ratio = Math.min(devicePixelRatio || 1, perf.maxWebglDpr);
       if (width !== w || height !== h || dpr !== ratio) {
         width = w; height = h; dpr = ratio;
@@ -175,6 +266,7 @@ export function AsciiGlobeSection() {
         last = 0;
         wake();
       } else {
+        resetInput();
         cancelAnimationFrame(raf);
         raf = 0;
         last = 0;
@@ -190,6 +282,7 @@ export function AsciiGlobeSection() {
     document.addEventListener("visibilitychange", visibility);
     return () => {
       disposed = true;
+      resetInput();
       unsubscribePerf();
       controller.abort();
       setArrivalReady(scroller, false);
@@ -208,6 +301,7 @@ export function AsciiGlobeSection() {
     <section ref={sectionRef} className={styles.section} data-home-chapter="ORIGIN" aria-label="Working globally, from Indonesia">
       <div className={styles.stickyContainer}>
         <div ref={fieldRef} className={styles.field} aria-hidden="true" />
+        <span ref={meteorRef} className={styles.meteor} aria-hidden="true" />
         <svg className={styles.global} viewBox="0 0 260 260" role="img" aria-label="Working globally, wherever you are.">
           <defs>
             <path id="origin-rim" d="M18 130a112 112 0 1 1 224 0a112 112 0 1 1 -224 0" />
