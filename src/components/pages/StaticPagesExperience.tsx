@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { setStackSurfaceProgress, StackSection } from "@/components/layout/StackSection";
 import { getPerformanceProfile } from "@/lib/performanceTier";
 import { pageMotion, sheetDuration } from "@/lib/pageMotion";
+import { AboutPage } from "./AboutPage";
 import { ContactPage } from "./ContactPage";
 import styles from "./StaticPagesExperience.module.css";
 
@@ -305,8 +306,8 @@ export function StaticPagesExperience() {
       }}
       surfacePathRef={(element) => { surfacePaths.current.about = element; }}
       id="about"
-      className={styles.layer}
-      contentClassName={styles.content}
+      className={`${styles.layer} ${styles.paperLayer}`}
+      contentClassName={styles.bleed}
       inert={active !== "about"}
       aria-hidden={active !== "about"}
       aria-label="About"
@@ -435,30 +436,11 @@ function PageContent({
     return () => { entrance.kill(); };
   }, [ready]);
 
-  if (section === "contact") {
-    return (
-      <div ref={root} style={{ height: "100%", width: "100%" }}>
-        <ContactPage ready={ready} onClose={onClose} />
-      </div>
-    );
-  }
-
   return (
-    <div ref={root} className={`${styles.page} ${ready ? styles.ready : ""}`}>
-      <span className={styles.grid} aria-hidden="true" />
-      <p className={styles.eyebrow} data-page-part>
-        0{sections.indexOf(section) + 2}
-      </p>
-      <h1 data-page-part>{section}</h1>
-      <p className={styles.placeholder} data-page-part>
-        A closer look at the engineering craft, systems thinking, and creative direction behind the work.
-      </p>
-      <div className={styles.actions} data-page-part>
-        <button type="button" className={styles.returnButton} onClick={onClose}>
-          <span className={styles.returnArrow} aria-hidden="true">←</span>
-          <span>Return to home</span>
-        </button>
-      </div>
+    <div ref={root} style={{ height: "100%", width: "100%" }}>
+      {section === "contact"
+        ? <ContactPage ready={ready} onClose={onClose} />
+        : <AboutPage ready={ready} onClose={onClose} />}
     </div>
   );
 }
