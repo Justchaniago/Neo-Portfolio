@@ -49,7 +49,7 @@ export function HeaderNav() {
       }
 
       if (pathname === "/") {
-        const baseTitle = "chaniago.me — Creative Software Engineer";
+        const baseTitle = "chaniago.me — Founder, Chaniago Labs";
         const nextTitle =
           section === "project"
             ? "Projects — chaniago.me"

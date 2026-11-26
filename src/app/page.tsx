@@ -328,7 +328,7 @@ export default function Home() {
           </div>
         </div>
 
-        <span className="sr-only">Software Engineer. Creative Developer. Interaction Designer.</span>
+        <span className="sr-only">Founder, Chaniago Labs. Creative Developer. Interaction Designer.</span>
 
         <div className={styles.heroCopy}>
           <span className={styles.heroArrow} aria-hidden="true">↘</span>
